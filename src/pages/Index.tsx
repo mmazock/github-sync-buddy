@@ -5,6 +5,8 @@ import GameLedger from "@/components/game/GameLedger";
 import BattleOverlay from "@/components/game/BattleOverlay";
 import BotDealPrompts from "@/components/game/BotDealPrompts";
 import NegotiationDialog from "@/components/game/NegotiationDialog";
+import GameInstructions from "@/components/game/GameInstructions";
+import TutorialMode from "@/components/game/TutorialMode";
 
 function GameContent() {
   const { gameData, currentGameCode, currentPlayerId, botProposals, dismissBotProposal, addGameLog } = useGame();
