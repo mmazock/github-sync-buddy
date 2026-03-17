@@ -5,9 +5,10 @@ interface BotDealPromptsProps {
   onDismiss: (index: number) => void;
   onAccept: (proposal: BotProposal) => void;
   onReject: (proposal: BotProposal) => void;
+  onNegotiate: (proposal: BotProposal) => void;
 }
 
-export default function BotDealPrompts({ proposals, onDismiss, onAccept, onReject }: BotDealPromptsProps) {
+export default function BotDealPrompts({ proposals, onDismiss, onAccept, onReject, onNegotiate }: BotDealPromptsProps) {
   if (proposals.length === 0) return null;
 
   return (
@@ -29,6 +30,12 @@ export default function BotDealPrompts({ proposals, onDismiss, onAccept, onRejec
           </div>
           <div className="flex gap-2 mt-3">
             <button
+              onClick={() => onNegotiate(proposal)}
+              className="flex-1 text-xs font-medium py-1.5 px-3 rounded bg-primary text-primary-foreground hover:bg-primary/90 transition-colors"
+            >
+              💬 Negotiate
+            </button>
+            <button
               onClick={() => onAccept(proposal)}
               className="flex-1 text-xs font-medium py-1.5 px-3 rounded bg-green-600 text-white hover:bg-green-700 transition-colors"
             >
@@ -44,7 +51,7 @@ export default function BotDealPrompts({ proposals, onDismiss, onAccept, onRejec
               onClick={() => onDismiss(i)}
               className="text-xs font-medium py-1.5 px-2 rounded bg-muted text-muted-foreground hover:bg-muted/80 transition-colors"
             >
-              Dismiss
+              ✕
             </button>
           </div>
         </div>
