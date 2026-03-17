@@ -5,6 +5,8 @@ import GameLedger from "@/components/game/GameLedger";
 import BattleOverlay from "@/components/game/BattleOverlay";
 import BotDealPrompts from "@/components/game/BotDealPrompts";
 import NegotiationDialog from "@/components/game/NegotiationDialog";
+import GameInstructions from "@/components/game/GameInstructions";
+import TutorialMode from "@/components/game/TutorialMode";
 
 function GameContent() {
   const { gameData, currentGameCode, currentPlayerId, botProposals, dismissBotProposal, addGameLog } = useGame();
@@ -48,7 +50,10 @@ function GameContent() {
       )}
 
       <div className="flex gap-4">
-        {currentGameCode && gameData?.gameState === "active" && <GameMap />}
+        <div className="flex-1 max-w-[75%]">
+          {currentGameCode && gameData?.gameState === "active" && <GameMap />}
+          {currentGameCode && gameData?.gameState === "active" && <GameInstructions />}
+        </div>
         <GameLedger />
       </div>
 

@@ -49,7 +49,7 @@ export default function GameMap() {
   const dictatorships = gameData?.dictatorships || {};
 
   return (
-    <div ref={containerRef} className="relative flex-1 max-w-[75%]">
+    <div ref={containerRef} className="relative flex-1">
       <img
         ref={mapRef}
         src="/map.png"
