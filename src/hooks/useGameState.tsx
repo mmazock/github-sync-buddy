@@ -1069,14 +1069,36 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     await advanceTurn();
   }, [currentGameCode, addGameLog, advanceTurn]);
 
-  const botChooseMove = (botId: string, bot: PlayerData, data: GameData, personality: any, difficulty: any): string | null => {
-    const currentPos = bot.shipPosition;
+  // BFS pathfinding for bots
+  const bfsDistance = (from: string, to: string, data: GameData): number => {
+    if (from === to) return 0;
+    const queue: Array<[string, number]> = [[from, 0]];
+    const visited = new Set<string>([from]);
+    while (queue.length > 0) {
+      const [pos, dist] = queue.shift()!;
+      const col = pos.charCodeAt(0);
+      const row = parseInt(pos.slice(1));
+      for (const [dc, dr] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const next = String.fromCharCode(col + dc) + (row + dr);
+        if (visited.has(next)) continue;
+        if (!waterSquares.has(next)) continue;
+        if (restrictedTransitions[pos] && !restrictedTransitions[pos].includes(next)) continue;
+        if ((pos === "G3" && next === "G4") || (pos === "G4" && next === "G3")) {
+          if (!data.suezOwner) continue;
+        }
+        if (next === to) return dist + 1;
+        visited.add(next);
+        queue.push([next, dist + 1]);
+      }
+    }
+    return 9999;
+  };
+
+  const getValidAdjacentSquares = (currentPos: string, data: GameData): string[] => {
     const col = currentPos.charCodeAt(0);
     const row = parseInt(currentPos.slice(1));
-    const directions = [[-1, 0], [1, 0], [0, -1], [0, 1]];
     const adjacent: string[] = [];
-
-    for (const [dc, dr] of directions) {
+    for (const [dc, dr] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
       const target = String.fromCharCode(col + dc) + (row + dr);
       if (!waterSquares.has(target)) continue;
       if (restrictedTransitions[currentPos] && !restrictedTransitions[currentPos].includes(target)) continue;
@@ -1085,37 +1107,139 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
       adjacent.push(target);
     }
-
-    if (adjacent.length === 0) return null;
-
-    const goal = botChooseGoal(botId, bot, data, personality);
-    const scored = adjacent.map(target => {
-      let score = Math.random() * 0.5;
-      if (harvestZones[target] && Object.keys(bot.inventory || {}).length === 0) score += personality.economyPriority * 8;
-      if (target === bot.homePort && bot.inventory && Object.keys(bot.inventory).length > 0) score += 25;
-      score *= difficulty.decisionQuality;
-      return { target, score };
-    });
-
-    scored.sort((a, b) => b.score - a.score);
-    return scored[0]?.target || null;
+    return adjacent;
   };
 
-  const botChooseGoal = (botId: string, bot: PlayerData, _data: GameData, _personality: any): string => {
-    if (bot.inventory && Object.keys(bot.inventory).length > 0) return bot.homePort;
-    // Find closest harvest zone
+  const botChooseGoal = (botId: string, bot: PlayerData, data: GameData, personality: any, difficulty: any): string => {
+    const inv = bot.inventory || {};
+    const hasInventory = Object.keys(inv).length > 0;
+    const capacity = 1 + (bot.upgrades?.transport || 0);
+    const invCount = Object.values(inv).reduce((sum: number, qty: any) => sum + (qty as number), 0);
+
+    // If inventory is full or has high-value goods, go home to cash in
+    if (hasInventory && invCount >= capacity) return bot.homePort;
+
+    // If we can manufacture something valuable nearby, check for that
+    if (hasInventory) {
+      // Check if we have ingredients for any recipe
+      for (const [good, recipe] of Object.entries(manufacturingRecipes)) {
+        const canMake = recipe.inputs.every(r => (inv[r] || 0) >= 1);
+        if (canMake) {
+          // Find closest factory that makes this good
+          let bestFactory = "";
+          let bestDist = 9999;
+          for (const [sq, goods] of Object.entries(factoryZones)) {
+            if (goods.includes(good)) {
+              const d = bfsDistance(bot.shipPosition, sq, data);
+              if (d < bestDist) { bestDist = d; bestFactory = sq; }
+            }
+          }
+          if (bestFactory && bestDist < 15) return bestFactory;
+        }
+      }
+
+      // Check if we're close to getting a recipe — need one more ingredient
+      for (const [good, recipe] of Object.entries(manufacturingRecipes)) {
+        const missing = recipe.inputs.filter(r => !(inv[r] && inv[r] >= 1));
+        if (missing.length === 1) {
+          // Find harvest zone with the missing resource
+          const needed = missing[0];
+          let bestZone = "";
+          let bestDist = 9999;
+          for (const [sq, zone] of Object.entries(harvestZones)) {
+            const resources = regionResources[zone.region] || [];
+            if (resources.includes(needed)) {
+              const d = bfsDistance(bot.shipPosition, sq, data);
+              if (d < bestDist) { bestDist = d; bestZone = sq; }
+            }
+          }
+          if (bestZone && bestDist < 20) return bestZone;
+        }
+      }
+
+      // Otherwise just head home with what we have
+      return bot.homePort;
+    }
+
+    // No inventory — find the best harvest zone considering value vs distance
     let bestTarget = bot.homePort;
     let bestScore = -1;
     for (const sq in harvestZones) {
       const region = harvestZones[sq].region;
       const resources = regionResources[region] || [];
-      let value = 0;
+      const dist = bfsDistance(bot.shipPosition, sq, data);
+      if (dist > 40) continue;
+
+      // Calculate expected value of harvesting here
+      let maxValue = 0;
       for (const r of resources) {
-        value = Math.max(value, (baseResourceValues[r] || 0) * (bot.multipliers?.[r] || 1));
+        const val = (baseResourceValues[r] || 0) * (bot.multipliers?.[r] || 1);
+        maxValue = Math.max(maxValue, val);
       }
-      if (value > bestScore) { bestScore = value; bestTarget = sq; }
+
+      // Distance to home from this zone
+      const distHome = bfsDistance(sq, bot.homePort, data);
+      const totalDist = dist + distHome;
+      if (totalDist === 0) continue;
+
+      // Score: value per total travel distance
+      let score = (maxValue * difficulty.decisionQuality) / Math.max(totalDist, 1);
+
+      // Bonus for high-value resources (Diamonds, Oil, Silk, Porcelain)
+      if (maxValue >= 70) score *= 1.5;
+
+      // Penalty for very long trips
+      if (totalDist > 25) score *= 0.5;
+
+      if (score > bestScore) { bestScore = score; bestTarget = sq; }
     }
     return bestTarget;
+  };
+
+  const botChooseMove = (botId: string, bot: PlayerData, data: GameData, personality: any, difficulty: any): string | null => {
+    const currentPos = bot.shipPosition;
+    const adjacent = getValidAdjacentSquares(currentPos, data);
+    if (adjacent.length === 0) return null;
+
+    const goal = botChooseGoal(botId, bot, data, personality, difficulty);
+
+    const scored = adjacent.map(target => {
+      const distToGoal = bfsDistance(target, goal, data);
+      // Primary: move closer to goal
+      let score = 1000 - distToGoal;
+
+      // Bonus: harvest zone when we need resources
+      const hasInventory = Object.keys(bot.inventory || {}).length > 0;
+      if (harvestZones[target] && !hasInventory) score += 50;
+
+      // Bonus: home port with inventory
+      if (target === bot.homePort && hasInventory) score += 200;
+
+      // Bonus: factory zone when we can manufacture
+      if (factoryZones[target] && hasInventory) {
+        for (const good of factoryZones[target]) {
+          const recipe = manufacturingRecipes[good];
+          if (recipe && recipe.inputs.every(r => ((bot.inventory || {})[r] || 0) >= 1)) {
+            score += 100;
+          }
+        }
+      }
+
+      // Small random noise for variety
+      score += Math.random() * 2;
+
+      // Avoid occupied squares (unless aggressive)
+      for (const pid in data.players) {
+        if (pid !== botId && data.players[pid].shipPosition === target) {
+          if (personality.aggression < 0.5) score -= 50;
+        }
+      }
+
+      return { target, score };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+    return scored[0]?.target || null;
   };
 
   const botHarvestAction = useCallback(async (botId: string, square: string, data: GameData) => {
