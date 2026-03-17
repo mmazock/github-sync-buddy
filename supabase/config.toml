@@ -1,1 +1,4 @@
 project_id = "pzwyymcjwihfqlatexqb"
+
+[functions.bot-negotiate]
+verify_jwt = false
