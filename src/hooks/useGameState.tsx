@@ -369,6 +369,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (!player.rollValue) return;
     if ((player.movesRemaining || 0) <= 0) return;
 
+    // Adjacency check — only cardinal (no diagonals)
+    const currentPos = player.shipPosition;
+    const colDiffMove = target.charCodeAt(0) - currentPos.charCodeAt(0);
+    const rowDiffMove = parseInt(target.slice(1)) - parseInt(currentPos.slice(1));
+    const isAdjacent = (Math.abs(colDiffMove) === 1 && rowDiffMove === 0) || (colDiffMove === 0 && Math.abs(rowDiffMove) === 1);
+    if (!isAdjacent) return;
+
     // Check for battle
     let defenderId: string | null = null;
     for (const id in data.players) {
