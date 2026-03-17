@@ -50,7 +50,10 @@ function GameContent() {
       )}
 
       <div className="flex gap-4">
-        {currentGameCode && gameData?.gameState === "active" && <GameMap />}
+        <div className="flex-1 max-w-[75%]">
+          {currentGameCode && gameData?.gameState === "active" && <GameMap />}
+          {currentGameCode && gameData?.gameState === "active" && <GameInstructions />}
+        </div>
         <GameLedger />
       </div>
 
