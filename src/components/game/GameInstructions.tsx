@@ -44,12 +44,18 @@ Automobiles are the most valuable item in the game!`
   {
     title: "💰 Cashing In",
     icon: Coins,
-    content: `When you return to your home port with resources, they are automatically sold. Each country has unique **multipliers** that increase the value of certain goods:
+    content: `When you return to your home port with resources, they are automatically sold at their base value, modified by your nation's multipliers.
 
-• **Spain** — 2× Copper, 1.5× Gold, Automobiles, Clothes
-• **England** — 2× Porcelain, Silk
-• **Germany** — 2× Technology, 1.5× Diamonds, Oil
-• **Italy** — 2× Spices, 1.5× everything else
+**Resource Base Values:**
+Automobiles $1,500 · Clothes $250 · Technology $200 · Steel $150 · Silk $80 · Porcelain $80 · Diamonds $70 · Oil $70 · Rice $60 · Spices $50 · Coal $40 · Cotton $40 · Copper $20 · Gold $20 · Iron $20 · Ivory $20
+
+**Country Bonuses:**
+• **Spain** — 2× Copper · 1.5× Automobiles, Clothes, Gold · 0.5× Spices
+• **Portugal** — 2× Rice · 1.5× Silk, Steel, Technology · 0.5× Ivory
+• **England** — 2× Porcelain, Silk · 0.5× Copper, Gold
+• **France** — 1.5× Cotton, Rice · 0.5× Ivory, Spices
+• **Italy** — 2× Spices · 1.5× Copper, Gold, Rice, Silk, Technology
+• **Germany** — 2× Technology · 1.5× Coal, Diamonds, Oil, Rice · 0.5× Automobiles
 
 Strategy tip: Harvest resources your country values most!`
   },
