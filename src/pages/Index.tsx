@@ -1,16 +1,47 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { GameProvider, useGame } from "@/hooks/useGameState";
+import GameMap from "@/components/game/GameMap";
+import GameLedger from "@/components/game/GameLedger";
+import BattleOverlay from "@/components/game/BattleOverlay";
+import BotDealPrompts from "@/components/game/BotDealPrompts";
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+function GameContent() {
+  const { gameData, currentGameCode, botProposals, dismissBotProposal, addGameLog } = useGame();
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen bg-background text-foreground p-4">
+      <h1 className="text-2xl font-bold mb-1">International Trade</h1>
+      {gameData?.players && Object.values(gameData.players).find((_, i) => i === 0) && (
+        <h3 className="text-sm text-muted-foreground mb-3">
+          {currentGameCode && gameData.gameState === "active" ? `Playing as ${Object.values(gameData.players).find(p => p.name)?.name || ""}` : ""}
+        </h3>
+      )}
+
+      <div className="flex gap-4">
+        {currentGameCode && gameData?.gameState === "active" && <GameMap />}
+        <GameLedger />
+      </div>
+
+      <BattleOverlay />
+      <BotDealPrompts
+        proposals={botProposals}
+        onDismiss={dismissBotProposal}
+        onAccept={async (p) => {
+          await addGameLog(`✅ Player accepted ${p.botName}'s ${p.dealType} proposal`);
+          dismissBotProposal(botProposals.indexOf(p));
+        }}
+        onReject={async (p) => {
+          await addGameLog(`❌ Player rejected ${p.botName}'s ${p.dealType} proposal`);
+          dismissBotProposal(botProposals.indexOf(p));
+        }}
+      />
     </div>
   );
-};
+}
 
-const Index = PlaceholderIndex;
-
-export default Index;
+export default function Index() {
+  return (
+    <GameProvider>
+      <GameContent />
+    </GameProvider>
+  );
+}
