@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useGame } from "@/hooks/useGameState";
 import { harvestZones, factoryZones, regionResources, baseResourceValues, manufacturingRecipes, BOT_PERSONALITIES } from "@/lib/gameData";
 import GameLog from "./GameLog";
+import TutorialMode from "./TutorialMode";
 
 export default function GameLedger() {
   const {
