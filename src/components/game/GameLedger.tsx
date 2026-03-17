@@ -33,56 +33,69 @@ export default function GameLedger() {
 
   const { createGame, joinGame } = useGame();
 
+  const [showTutorial, setShowTutorial] = useState(false);
+
   const countries = ["Spain", "Portugal", "England", "France", "Italy", "Germany"];
 
   // Setup screen
   if (!currentGameCode) {
     return (
-      <div className="w-[300px] border-2 border-foreground p-3 shrink-0 text-sm overflow-y-auto max-h-[85vh]">
-        <h2 className="font-bold text-lg mb-3">Game Setup</h2>
+      <>
+        {showTutorial && <TutorialMode onClose={() => setShowTutorial(false)} />}
+        <div className="w-[300px] border-2 border-foreground p-3 shrink-0 text-sm overflow-y-auto max-h-[85vh]">
+          <h2 className="font-bold text-lg mb-3">Game Setup</h2>
 
-        {!showHostSetup ? (
+          {/* Tutorial button */}
           <button
-            onClick={() => setShowHostSetup(true)}
-            className="w-full py-2 px-3 bg-primary text-primary-foreground rounded mb-4"
+            onClick={() => setShowTutorial(true)}
+            className="w-full py-2.5 px-3 bg-accent text-accent-foreground rounded mb-3 flex items-center justify-center gap-2 hover:bg-accent/80 transition-colors font-medium"
           >
-            Create Game (Host)
+            📖 How to Play (Tutorial)
           </button>
-        ) : (
-          <div className="mb-4 space-y-2">
-            <input className="w-full border rounded px-2 py-1" placeholder="Your Name" value={hostName} onChange={e => setHostName(e.target.value)} />
-            <select className="w-full border rounded px-2 py-1" value={hostCountry} onChange={e => setHostCountry(e.target.value)}>
+
+          {!showHostSetup ? (
+            <button
+              onClick={() => setShowHostSetup(true)}
+              className="w-full py-2 px-3 bg-primary text-primary-foreground rounded mb-4"
+            >
+              Create Game (Host)
+            </button>
+          ) : (
+            <div className="mb-4 space-y-2">
+              <input className="w-full border rounded px-2 py-1" placeholder="Your Name" value={hostName} onChange={e => setHostName(e.target.value)} />
+              <select className="w-full border rounded px-2 py-1" value={hostCountry} onChange={e => setHostCountry(e.target.value)}>
+                <option value="">Select Country</option>
+                {countries.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <button
+                className="w-full py-2 bg-primary text-primary-foreground rounded"
+                onClick={() => hostName && hostCountry && createGame(hostName, hostCountry)}
+              >
+                Host Game
+              </button>
+            </div>
+          )}
+
+          <hr className="my-3" />
+          <div className="space-y-2">
+            <input className="w-full border rounded px-2 py-1" placeholder="Join Code" value={joinCode} onChange={e => setJoinCode(e.target.value)} />
+            <input className="w-full border rounded px-2 py-1" placeholder="Your Name" value={playerName} onChange={e => setPlayerName(e.target.value)} />
+            <select className="w-full border rounded px-2 py-1" value={country} onChange={e => setCountry(e.target.value)}>
               <option value="">Select Country</option>
               {countries.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             <button
               className="w-full py-2 bg-primary text-primary-foreground rounded"
-              onClick={() => hostName && hostCountry && createGame(hostName, hostCountry)}
+              onClick={async () => {
+                const err = await joinGame(joinCode, playerName, country);
+                if (err) alert(err);
+              }}
             >
-              Host Game
+              Join Game
             </button>
           </div>
-        )}
-
-        <hr className="my-3" />
-        <div className="space-y-2">
-          <input className="w-full border rounded px-2 py-1" placeholder="Join Code" value={joinCode} onChange={e => setJoinCode(e.target.value)} />
-          <input className="w-full border rounded px-2 py-1" placeholder="Your Name" value={playerName} onChange={e => setPlayerName(e.target.value)} />
-          <select className="w-full border rounded px-2 py-1" value={country} onChange={e => setCountry(e.target.value)}>
-            <option value="">Select Country</option>
-            {countries.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
-          <button
-            className="w-full py-2 bg-primary text-primary-foreground rounded"
-            onClick={async () => {
-              const err = await joinGame(joinCode, playerName, country);
-              if (err) alert(err);
-            }}
-          >
-            Join Game
-          </button>
         </div>
-      </div>
+      </>
     );
   }
 
