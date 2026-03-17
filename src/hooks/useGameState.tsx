@@ -1249,8 +1249,35 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const capacity = 1 + (bot.upgrades?.transport || 0);
     const botInv = { ...(bot.inventory || {}) };
 
-    for (let i = 0; i < capacity && i < resources.length; i++) {
-      const r = resources[i];
+    // Sort resources by value considering multipliers — pick the best ones
+    const sortedResources = [...resources].sort((a, b) => {
+      const valA = (baseResourceValues[a] || 0) * (bot.multipliers?.[a] || 1);
+      const valB = (baseResourceValues[b] || 0) * (bot.multipliers?.[b] || 1);
+      return valB - valA;
+    });
+
+    // Also consider picking resources needed for manufacturing recipes
+    const neededForRecipes = new Set<string>();
+    for (const [good, recipe] of Object.entries(manufacturingRecipes)) {
+      for (const input of recipe.inputs) {
+        if (!(botInv[input] && botInv[input] >= 1)) {
+          neededForRecipes.add(input);
+        }
+      }
+    }
+
+    // Prioritize recipe ingredients, then highest value
+    const prioritized = sortedResources.sort((a, b) => {
+      const aNeeded = neededForRecipes.has(a) ? 1 : 0;
+      const bNeeded = neededForRecipes.has(b) ? 1 : 0;
+      if (aNeeded !== bNeeded) return bNeeded - aNeeded;
+      const valA = (baseResourceValues[a] || 0) * (bot.multipliers?.[a] || 1);
+      const valB = (baseResourceValues[b] || 0) * (bot.multipliers?.[b] || 1);
+      return valB - valA;
+    });
+
+    for (let i = 0; i < capacity && i < prioritized.length; i++) {
+      const r = prioritized[i];
       botInv[r] = (botInv[r] || 0) + 1;
     }
 
