@@ -25,14 +25,9 @@ You can also construct the Suez Canal or fund dictatorships.
   {
     title: "⛏️ Harvesting",
     icon: Wheat,
-    content: `When you stop on a harvest zone (coastal squares near continents), you can harvest resources. You must correctly name a country at that location to harvest. Each region offers different resources:
+    content: `When you stop on a harvest zone (coastal squares near continents), you can harvest resources. You must correctly name a country at that location to harvest.
 
-• **West Africa** — Gold, Ivory
-• **Southern Africa** — Gold, Ivory, Copper, Iron, Diamonds
-• **Arabian Peninsula** — Oil, Spices
-• **Indian Subcontinent** — Spices, Coal, Cotton, Rice
-• **China** — Silk, Porcelain, Rice, Cotton, Spices, Iron
-• **Japan** — Copper, Coal`
+The game won't tell you which resources are available where — you'll need to use your real-world geographic knowledge to figure that out! Think about what regions are historically and economically known for producing.`
   },
   {
     title: "🏭 Manufacturing",
