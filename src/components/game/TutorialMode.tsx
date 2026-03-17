@@ -45,8 +45,8 @@ const tutorialSteps: TutorialStep[] = [
   {
     title: "Harvesting Resources",
     icon: <Wheat className="h-8 w-8 text-primary" />,
-    content: "When your ship is on a harvest zone (near a coastline), the '⛏️ Harvest' button appears. You'll need to name a country at that location correctly.\n\nSuccess! You'll choose which resources to collect from that region. Different regions offer different goods:\n\n• Africa: Gold, Ivory, Copper, Diamonds\n• Arabia: Oil, Spices\n• India: Spices, Cotton, Rice, Coal\n• China: Silk, Porcelain, Iron\n• Japan: Copper, Coal",
-    tip: "Study the map! Knowing which countries border each sea zone is key to successful harvesting."
+    content: "When your ship is on a harvest zone (near a coastline), the '⛏️ Harvest' button appears. You'll need to name a country at that location correctly.\n\nSuccess! You'll choose which resources to collect from that region. But here's the catch — the game won't tell you which resources are where. You'll need to use your real-world geographic knowledge to figure out which regions produce which goods!\n\nThink about what countries are known for historically and economically. Where would you find gold? Silk? Oil?",
+    tip: "Geography is power! Players who know their world map and trade history will have a huge advantage."
   },
   {
     title: "Manufacturing",
@@ -57,7 +57,7 @@ const tutorialSteps: TutorialStep[] = [
   {
     title: "Cashing In at Home",
     icon: <Coins className="h-8 w-8 text-primary" />,
-    content: "When you return to your HOME PORT with resources in your inventory, they're automatically sold!\n\nYour nation's multipliers boost the sale price of specific goods. For example, if you're Italy with 2× Spices multiplier, Spices worth $50 become $100 each.\n\nThis is how you earn money toward victory!",
+    content: "When you return to your HOME PORT with resources in your inventory, they're automatically sold!\n\nYour nation's multipliers boost or reduce the sale price of specific goods. For example, if you're Italy with 2× Spices multiplier, Spices worth $50 become $100 each. But beware — some nations have 0.5× penalties on certain goods!\n\nThis is how you earn money toward victory!",
     tip: "The most profitable strategy: harvest resources your nation values most, manufacture them into goods, then cash in."
   },
   {
