@@ -404,7 +404,6 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (!waterSquares.has(target)) return;
 
     // Suez
-    const currentPos = player.shipPosition;
     if ((currentPos === "G3" && target === "G4") || (currentPos === "G4" && target === "G3")) {
       if (!data.suezOwner) return;
       if (data.suezOwner !== currentPlayerId) {
