@@ -548,10 +548,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const giveMoney = useCallback(async (recipientId: string, amount: number) => {
     if (!currentGameCode || !currentPlayerId) return;
+    if (amount <= 0) return;
     const snap = await get(child(gamesRef, currentGameCode));
     const data = snap.val() as GameData;
     const sender = data.players[currentPlayerId];
     const recipient = data.players[recipientId];
+
+    if (sender.money < amount) {
+      alert(`Not enough money. You have $${sender.money}.`);
+      return;
+    }
 
     await update(child(gamesRef, `${currentGameCode}/players/${currentPlayerId}`), { money: sender.money - amount });
     await update(child(gamesRef, `${currentGameCode}/players/${recipientId}`), { money: recipient.money + amount });
@@ -567,6 +573,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const recipient = data.players[recipientId];
 
     const senderInv = { ...(sender.inventory || {}) };
+    if ((senderInv[resource] || 0) < amount) {
+      alert(`Not enough ${resource}. You have ${senderInv[resource] || 0}.`);
+      return;
+    }
     senderInv[resource] -= amount;
     if (senderInv[resource] <= 0) delete senderInv[resource];
 
@@ -601,17 +611,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const purchaseUpgrade = useCallback(async (type: string): Promise<{ success: boolean; message: string }> => {
     if (!currentGameCode || !currentPlayerId) return { success: false, message: "No game" };
-    const snap = await get(child(gamesRef, currentGameCode));
-    const data = snap.val() as GameData;
-    const player = data.players[currentPlayerId];
+    try {
+      const snap = await get(child(gamesRef, currentGameCode));
+      const data = snap.val() as GameData;
+      const player = data.players?.[currentPlayerId];
+      if (!player) return { success: false, message: "Player not found" };
 
-    const level = player.upgrades?.[type as keyof typeof player.upgrades] || 0;
-    const cost = type === "transport" ? 150 * (level + 1) : 100 * (level + 1);
+      const level = player.upgrades?.[type as keyof typeof player.upgrades] || 0;
+      const cost = type === "transport" ? 150 * (level + 1) : 100 * (level + 1);
 
-    if (type === "navigation" && level >= 3) return { success: false, message: "Max level reached" };
-    if (player.money < cost) return { success: false, message: `Not enough money. Cost: $${cost}` };
+      if (type === "navigation" && level >= 3) return { success: false, message: "Max level reached" };
+      if ((player.money || 0) < cost) return { success: false, message: `Not enough money. You have $${player.money || 0}, need $${cost}.` };
 
-    await update(child(gamesRef, `${currentGameCode}/players/${currentPlayerId}`), { money: player.money - cost });
+      await update(child(gamesRef, `${currentGameCode}/players/${currentPlayerId}`), { money: player.money - cost });
 
     const success = Math.random() < 0.75;
     if (success) {
@@ -621,6 +633,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
     setShowingUpgradeMenu(false);
     return { success, message: success ? `${type} upgrade successful!` : `${type} upgrade failed. Investment lost.` };
+    } catch (err) {
+      setShowingUpgradeMenu(false);
+      return { success: false, message: "Error processing upgrade." };
+    }
   }, [currentGameCode, currentPlayerId]);
 
   const purchaseSuez = useCallback(async (): Promise<string> => {
@@ -860,7 +876,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const activePlayer = data.players?.[activePlayerId];
 
       if (!activePlayer?.isBot) {
-        // Handle bot battle responses
+        // Handle bot battle responses when it's a human's turn but bot is in battle
         if (data.battle) {
           const battle = data.battle;
           if (battle.stage === "awaitingDefenderRoll" && data.players[battle.defenderId]?.isBot) {
@@ -869,9 +885,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           } else if (battle.stage === "awaitingAttackerRoll" && data.players[battle.attackerId]?.isBot) {
             await new Promise(r => setTimeout(r, 1500));
             await botRollAttackAction(battle.attackerId, data);
-          } else if ((battle.stage === "result" || battle.stage === "decision") && data.players[battle.winnerId!]?.isBot) {
+          } else if ((battle.stage === "result" || battle.stage === "decision") && battle.winnerId && data.players[battle.winnerId]?.isBot) {
             await new Promise(r => setTimeout(r, 1500));
-            await botHandleBattleDecisionAction(battle.winnerId!, data);
+            await botHandleBattleDecisionAction(battle.winnerId, data);
           } else {
             return;
           }
@@ -884,8 +900,37 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Handle bot in battle (when it's the bot's turn)
+      if (data.battle) {
+        const battle = data.battle;
+        if (battle.stage === "awaitingAttackerRoll" && battle.attackerId === activePlayerId) {
+          await new Promise(r => setTimeout(r, 1000));
+          await botRollAttackAction(activePlayerId, data);
+        } else if (battle.stage === "awaitingDefenderRoll" && battle.defenderId === activePlayerId) {
+          await new Promise(r => setTimeout(r, 1000));
+          await botRollDefenseAction(activePlayerId, data);
+        } else if ((battle.stage === "result" || battle.stage === "decision") && battle.winnerId === activePlayerId) {
+          await new Promise(r => setTimeout(r, 1000));
+          await botHandleBattleDecisionAction(activePlayerId, data);
+        } else {
+          // Battle exists but this bot isn't involved in the current stage — wait
+          return;
+        }
+        const freshSnap = await get(child(gamesRef, currentGameCode!));
+        const freshData = freshSnap.val() as GameData;
+        if (!freshData || freshData.hostId !== currentPlayerId || freshData.gameState !== "active") return;
+        data = freshData;
+        continue;
+      }
+
       // Execute bot turn
-      await executeBotTurnAction(activePlayerId, data);
+      try {
+        await executeBotTurnAction(activePlayerId, data);
+      } catch (err) {
+        console.error("Bot turn error:", err);
+        // Force advance turn on error to prevent freezing
+        try { await advanceTurn(); } catch (_) {}
+      }
       await new Promise(r => setTimeout(r, 500));
 
       const refreshedSnap = await get(child(gamesRef, currentGameCode!));

@@ -8,7 +8,7 @@ export default function BattleOverlay() {
   const attacker = gameData.players[battle.attackerId];
   const defender = gameData.players[battle.defenderId];
 
-  if (battle.stage === "decision" || battle.stage === "displacement") return null;
+  if (battle.stage === "displacement") return null;
 
   return (
     <div className="fixed inset-0 bg-black/85 text-white z-[9999] flex flex-col items-center justify-center font-sans">
@@ -53,6 +53,30 @@ export default function BattleOverlay() {
             <button className="mt-6 py-3 px-8 bg-green-600 rounded-lg text-xl font-bold hover:bg-green-700 transition" onClick={battleContinue}>
               Continue
             </button>
+          )}
+        </>
+      )}
+
+      {battle.stage === "decision" && (
+        <>
+          <h1 className="text-4xl font-bold mb-4">⚔️ VICTORY</h1>
+          <h2 className="text-2xl mb-6">
+            {battle.winnerId && gameData.players[battle.winnerId]?.name} — Choose your action:
+          </h2>
+          {currentPlayerId === battle.winnerId ? (
+            <div className="flex flex-col gap-4">
+              <button className="py-3 px-8 bg-red-600 rounded-lg text-xl font-bold hover:bg-red-700 transition" onClick={battleDestroy}>
+                💥 Destroy — Send them home, destroy cargo
+              </button>
+              <button className="py-3 px-8 bg-yellow-600 rounded-lg text-xl font-bold hover:bg-yellow-700 transition" onClick={battlePlunder}>
+                🏴‍☠️ Plunder — Steal cargo, displace them
+              </button>
+              <button className="py-3 px-8 bg-blue-600 rounded-lg text-xl font-bold hover:bg-blue-700 transition" onClick={battleMoveOn}>
+                🕊️ Move On — Displace them, keep the peace
+              </button>
+            </div>
+          ) : (
+            <p className="mt-4 text-lg opacity-70">Waiting for winner to decide...</p>
           )}
         </>
       )}

@@ -239,6 +239,7 @@ export default function GameLedger() {
 
   return (
     <div className="w-[300px] border-2 border-foreground p-3 shrink-0 text-sm overflow-y-auto max-h-[85vh]">
+      <p className="font-mono text-xs mb-1">Join Code: <strong className="text-primary select-all">{currentGameCode}</strong></p>
       <p className="font-bold">Round {roundNumber} — {phaseNames[currentPhase]}</p>
       <div className="flex gap-2 mt-1">
         <button className="py-1 px-2 bg-primary text-primary-foreground rounded text-xs" onClick={endPhase}>End Phase</button>
