@@ -573,6 +573,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const recipient = data.players[recipientId];
 
     const senderInv = { ...(sender.inventory || {}) };
+    if ((senderInv[resource] || 0) < amount) {
+      alert(`Not enough ${resource}. You have ${senderInv[resource] || 0}.`);
+      return;
+    }
     senderInv[resource] -= amount;
     if (senderInv[resource] <= 0) delete senderInv[resource];
 
