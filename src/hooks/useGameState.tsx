@@ -611,17 +611,19 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const purchaseUpgrade = useCallback(async (type: string): Promise<{ success: boolean; message: string }> => {
     if (!currentGameCode || !currentPlayerId) return { success: false, message: "No game" };
-    const snap = await get(child(gamesRef, currentGameCode));
-    const data = snap.val() as GameData;
-    const player = data.players[currentPlayerId];
+    try {
+      const snap = await get(child(gamesRef, currentGameCode));
+      const data = snap.val() as GameData;
+      const player = data.players?.[currentPlayerId];
+      if (!player) return { success: false, message: "Player not found" };
 
-    const level = player.upgrades?.[type as keyof typeof player.upgrades] || 0;
-    const cost = type === "transport" ? 150 * (level + 1) : 100 * (level + 1);
+      const level = player.upgrades?.[type as keyof typeof player.upgrades] || 0;
+      const cost = type === "transport" ? 150 * (level + 1) : 100 * (level + 1);
 
-    if (type === "navigation" && level >= 3) return { success: false, message: "Max level reached" };
-    if (player.money < cost) return { success: false, message: `Not enough money. Cost: $${cost}` };
+      if (type === "navigation" && level >= 3) return { success: false, message: "Max level reached" };
+      if ((player.money || 0) < cost) return { success: false, message: `Not enough money. You have $${player.money || 0}, need $${cost}.` };
 
-    await update(child(gamesRef, `${currentGameCode}/players/${currentPlayerId}`), { money: player.money - cost });
+      await update(child(gamesRef, `${currentGameCode}/players/${currentPlayerId}`), { money: player.money - cost });
 
     const success = Math.random() < 0.75;
     if (success) {
