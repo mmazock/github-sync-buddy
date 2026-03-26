@@ -876,7 +876,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const activePlayer = data.players?.[activePlayerId];
 
       if (!activePlayer?.isBot) {
-        // Handle bot battle responses
+        // Handle bot battle responses when it's a human's turn but bot is in battle
         if (data.battle) {
           const battle = data.battle;
           if (battle.stage === "awaitingDefenderRoll" && data.players[battle.defenderId]?.isBot) {
@@ -885,9 +885,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           } else if (battle.stage === "awaitingAttackerRoll" && data.players[battle.attackerId]?.isBot) {
             await new Promise(r => setTimeout(r, 1500));
             await botRollAttackAction(battle.attackerId, data);
-          } else if ((battle.stage === "result" || battle.stage === "decision") && data.players[battle.winnerId!]?.isBot) {
+          } else if ((battle.stage === "result" || battle.stage === "decision") && battle.winnerId && data.players[battle.winnerId]?.isBot) {
             await new Promise(r => setTimeout(r, 1500));
-            await botHandleBattleDecisionAction(battle.winnerId!, data);
+            await botHandleBattleDecisionAction(battle.winnerId, data);
           } else {
             return;
           }
@@ -900,8 +900,37 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
+      // Handle bot in battle (when it's the bot's turn)
+      if (data.battle) {
+        const battle = data.battle;
+        if (battle.stage === "awaitingAttackerRoll" && battle.attackerId === activePlayerId) {
+          await new Promise(r => setTimeout(r, 1000));
+          await botRollAttackAction(activePlayerId, data);
+        } else if (battle.stage === "awaitingDefenderRoll" && battle.defenderId === activePlayerId) {
+          await new Promise(r => setTimeout(r, 1000));
+          await botRollDefenseAction(activePlayerId, data);
+        } else if ((battle.stage === "result" || battle.stage === "decision") && battle.winnerId === activePlayerId) {
+          await new Promise(r => setTimeout(r, 1000));
+          await botHandleBattleDecisionAction(activePlayerId, data);
+        } else {
+          // Battle exists but this bot isn't involved in the current stage — wait
+          return;
+        }
+        const freshSnap = await get(child(gamesRef, currentGameCode!));
+        const freshData = freshSnap.val() as GameData;
+        if (!freshData || freshData.hostId !== currentPlayerId || freshData.gameState !== "active") return;
+        data = freshData;
+        continue;
+      }
+
       // Execute bot turn
-      await executeBotTurnAction(activePlayerId, data);
+      try {
+        await executeBotTurnAction(activePlayerId, data);
+      } catch (err) {
+        console.error("Bot turn error:", err);
+        // Force advance turn on error to prevent freezing
+        try { await advanceTurn(); } catch (_) {}
+      }
       await new Promise(r => setTimeout(r, 500));
 
       const refreshedSnap = await get(child(gamesRef, currentGameCode!));
