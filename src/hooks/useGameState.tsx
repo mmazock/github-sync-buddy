@@ -633,6 +633,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     }
     setShowingUpgradeMenu(false);
     return { success, message: success ? `${type} upgrade successful!` : `${type} upgrade failed. Investment lost.` };
+    } catch (err) {
+      setShowingUpgradeMenu(false);
+      return { success: false, message: "Error processing upgrade." };
+    }
   }, [currentGameCode, currentPlayerId]);
 
   const purchaseSuez = useCallback(async (): Promise<string> => {
