@@ -548,10 +548,16 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const giveMoney = useCallback(async (recipientId: string, amount: number) => {
     if (!currentGameCode || !currentPlayerId) return;
+    if (amount <= 0) return;
     const snap = await get(child(gamesRef, currentGameCode));
     const data = snap.val() as GameData;
     const sender = data.players[currentPlayerId];
     const recipient = data.players[recipientId];
+
+    if (sender.money < amount) {
+      alert(`Not enough money. You have $${sender.money}.`);
+      return;
+    }
 
     await update(child(gamesRef, `${currentGameCode}/players/${currentPlayerId}`), { money: sender.money - amount });
     await update(child(gamesRef, `${currentGameCode}/players/${recipientId}`), { money: recipient.money + amount });
