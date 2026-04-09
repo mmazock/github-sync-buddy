@@ -345,8 +345,9 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     const player = data.players[currentPlayerId];
 
-    // Displacement mode
-    if (data.battle?.stage === "displacement" && data.battle.displacedPlayerId === currentPlayerId) {
+    // Displacement mode - winner picks where to send the loser
+    if (data.battle?.stage === "displacement" && data.battle.winnerId === currentPlayerId) {
+      const displacedId = data.battle.displacedPlayerId!;
       const origin = data.battle.originSquare!;
       const colDiff = target.charCodeAt(0) - origin.charCodeAt(0);
       const rowDiff = parseInt(target.slice(1)) - parseInt(origin.slice(1));
@@ -354,11 +355,12 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (!isAdj || !waterSquares.has(target)) return;
 
       for (const pid in data.players) {
-        if (pid !== currentPlayerId && data.players[pid].shipPosition === target) return;
+        if (pid !== displacedId && data.players[pid].shipPosition === target) return;
       }
 
-      await update(child(gamesRef, `${currentGameCode}/players/${currentPlayerId}`), { shipPosition: target });
+      await update(child(gamesRef, `${currentGameCode}/players/${displacedId}`), { shipPosition: target });
       await update(child(gamesRef, currentGameCode), { battle: null });
+      await addGameLog(`🚢 ${data.players[displacedId]?.name} was displaced to ${target}`);
       await advanceTurn();
       return;
     }
@@ -415,6 +417,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         });
         return;
       }
+    }
+
+    // Dictatorship check
+    const dictOwner = (data.dictatorships || {})[target];
+    if (dictOwner && dictOwner !== currentPlayerId) {
+      await update(child(gamesRef, currentGameCode), {
+        permissionRequest: {
+          type: "dictatorship", requesterId: currentPlayerId,
+          ownerId: dictOwner, square: target, round: data.round
+        }
+      });
+      return;
     }
 
     // Malacca
@@ -900,20 +914,41 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      // Handle bot in battle (when it's the bot's turn)
+      // Handle ANY bot in battle (not just the active player)
       if (data.battle) {
         const battle = data.battle;
-        if (battle.stage === "awaitingAttackerRoll" && battle.attackerId === activePlayerId) {
+        const attackerIsBot = data.players[battle.attackerId]?.isBot;
+        const defenderIsBot = data.players[battle.defenderId]?.isBot;
+        const winnerIsBot = battle.winnerId ? data.players[battle.winnerId]?.isBot : false;
+
+        if (battle.stage === "awaitingAttackerRoll" && attackerIsBot) {
           await new Promise(r => setTimeout(r, 1000));
-          await botRollAttackAction(activePlayerId, data);
-        } else if (battle.stage === "awaitingDefenderRoll" && battle.defenderId === activePlayerId) {
+          await botRollAttackAction(battle.attackerId, data);
+        } else if (battle.stage === "awaitingDefenderRoll" && defenderIsBot) {
           await new Promise(r => setTimeout(r, 1000));
-          await botRollDefenseAction(activePlayerId, data);
-        } else if ((battle.stage === "result" || battle.stage === "decision") && battle.winnerId === activePlayerId) {
+          await botRollDefenseAction(battle.defenderId, data);
+        } else if ((battle.stage === "result" || battle.stage === "decision") && battle.winnerId && winnerIsBot) {
           await new Promise(r => setTimeout(r, 1000));
-          await botHandleBattleDecisionAction(activePlayerId, data);
+          await botHandleBattleDecisionAction(battle.winnerId, data);
+        } else if (battle.stage === "displacement" && battle.winnerId && winnerIsBot) {
+          await new Promise(r => setTimeout(r, 1000));
+          const displacedId = battle.displacedPlayerId!;
+          const origin = battle.originSquare!;
+          const adj = getValidAdjacentSquares(origin, data);
+          const validAdj = adj.filter(sq => {
+            for (const pid in data.players) {
+              if (pid !== displacedId && data.players[pid].shipPosition === sq) return false;
+            }
+            return true;
+          });
+          if (validAdj.length > 0) {
+            await update(child(gamesRef, `${currentGameCode}/players/${displacedId}`), { shipPosition: validAdj[0] });
+          }
+          await update(child(gamesRef, currentGameCode!), { battle: null });
+          await addGameLog(`🚢 ${data.players[displacedId]?.name} was displaced to ${validAdj[0] || "unknown"}`);
+          await advanceTurn();
         } else {
-          // Battle exists but this bot isn't involved in the current stage — wait
+          // Battle exists but needs human input — wait
           return;
         }
         const freshSnap = await get(child(gamesRef, currentGameCode!));
@@ -954,6 +989,43 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     await new Promise(r => setTimeout(r, 800 + Math.random() * 500));
 
     if (phase === 0) {
+      // Bot give phase — fulfill deals by giving resources/money
+      const humanPlayers = Object.keys(data.players).filter(id => !data.players[id].isBot);
+      const trust = botTrustScores[botId] || {};
+      
+      // Check if bot should give to a trusted player
+      for (const targetId of humanPlayers) {
+        const trustLevel = trust[targetId] || 50;
+        if (trustLevel > 70 && personality.loyalty > 0.5 && Math.random() < personality.loyalty * 0.3) {
+          const botInv = bot.inventory || {};
+          const resources = Object.keys(botInv);
+          if (resources.length > 0 && Math.random() < 0.4) {
+            const resource = resources[Math.floor(Math.random() * resources.length)];
+            const amount = 1;
+            if ((botInv[resource] || 0) >= amount) {
+              const senderInv = { ...botInv };
+              senderInv[resource] -= amount;
+              if (senderInv[resource] <= 0) delete senderInv[resource];
+              const recipient = data.players[targetId];
+              const recipientInv = { ...(recipient.inventory || {}) };
+              recipientInv[resource] = (recipientInv[resource] || 0) + amount;
+              await update(child(gamesRef, `${currentGameCode}/players/${botId}`), { inventory: senderInv });
+              await update(child(gamesRef, `${currentGameCode}/players/${targetId}`), { inventory: recipientInv });
+              await addGameLog(`📦 ${bot.name} gave ${amount} ${resource} to ${recipient.name}`);
+            }
+          } else if (bot.money >= 100 && Math.random() < 0.3) {
+            const amount = Math.min(Math.floor(bot.money * 0.1), 200);
+            if (amount > 0) {
+              const recipient = data.players[targetId];
+              await update(child(gamesRef, `${currentGameCode}/players/${botId}`), { money: bot.money - amount });
+              await update(child(gamesRef, `${currentGameCode}/players/${targetId}`), { money: (recipient.money || 0) + amount });
+              await addGameLog(`💰 ${bot.name} gave $${amount} to ${recipient.name}`);
+            }
+          }
+          break;
+        }
+      }
+
       // Bot propose to player
       await botProposeToPlayerAction(botId, bot, data, personality);
 
@@ -1374,35 +1446,32 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     const battle = data.battle!;
     const loserId = battle.winnerId === battle.attackerId ? battle.defenderId : battle.attackerId;
     const loser = data.players[loserId];
+    const winner = data.players[botId];
 
     await update(child(gamesRef, `${currentGameCode}/players/${botId}`), { movesRemaining: 0 });
 
+    // If on result stage, advance to decision
+    if (battle.stage === "result") {
+      await update(child(gamesRef, `${currentGameCode}/battle`), { stage: "decision" });
+      return;
+    }
+
     if (personality.aggression > 0.7) {
+      // Destroy
       await update(child(gamesRef, `${currentGameCode}/players/${loserId}`), { shipPosition: loser.homePort, inventory: {}, movesRemaining: 0 });
       await update(child(gamesRef, currentGameCode), { battle: null });
-      await addGameLog(`⚔️ ${data.players[botId].name} destroyed ${loser.name}'s ship!`);
+      await addGameLog(`⚔️ ${winner.name} destroyed ${loser.name}'s ship!`);
       await advanceTurn();
     } else {
-      const winner = data.players[botId];
+      // Plunder - steal cargo, then set displacement stage (handled by bot loop)
       const winnerInv = { ...(winner.inventory || {}) };
       for (const r in loser.inventory) { winnerInv[r] = (winnerInv[r] || 0) + loser.inventory[r]; }
       await update(child(gamesRef, `${currentGameCode}/players/${botId}`), { inventory: winnerInv });
       await update(child(gamesRef, `${currentGameCode}/players/${loserId}`), { inventory: {} });
-
-      // Displace to first available adjacent
-      const origin = winner.shipPosition;
-      const originCol = origin.charCodeAt(0);
-      const originRow = parseInt(origin.slice(1));
-      for (const [dc, dr] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
-        const t = String.fromCharCode(originCol + dc) + (originRow + dr);
-        if (waterSquares.has(t)) {
-          await update(child(gamesRef, `${currentGameCode}/players/${loserId}`), { shipPosition: t });
-          break;
-        }
-      }
-      await update(child(gamesRef, currentGameCode), { battle: null });
-      await addGameLog(`🏴‍☠️ ${data.players[botId].name} plundered ${loser.name}!`);
-      await advanceTurn();
+      await update(child(gamesRef, currentGameCode), {
+        battle: { ...battle, stage: "displacement", displacedPlayerId: loserId, originSquare: winner.shipPosition }
+      });
+      await addGameLog(`🏴‍☠️ ${winner.name} plundered ${loser.name}!`);
     }
   }, [currentGameCode, addGameLog, advanceTurn]);
 

@@ -8,7 +8,19 @@ export default function BattleOverlay() {
   const attacker = gameData.players[battle.attackerId];
   const defender = gameData.players[battle.defenderId];
 
-  if (battle.stage === "displacement") return null;
+  if (battle.stage === "displacement") {
+    const displaced = gameData.players[battle.displacedPlayerId!];
+    return (
+      <div className="fixed top-0 left-0 right-0 bg-black/90 text-white z-[9999] py-4 text-center pointer-events-none">
+        <h2 className="text-xl font-bold">🚢 DISPLACEMENT</h2>
+        {currentPlayerId === battle.winnerId ? (
+          <p className="mt-1">Click an adjacent water square to displace {displaced?.name}</p>
+        ) : (
+          <p className="mt-1 opacity-70">Waiting for winner to choose displacement...</p>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/85 text-white z-[9999] flex flex-col items-center justify-center font-sans">
