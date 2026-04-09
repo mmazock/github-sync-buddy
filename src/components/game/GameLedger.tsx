@@ -347,15 +347,26 @@ export default function GameLedger() {
                   )}
                   {currentPhase === 0 && player.givingMode && (
                     <div className="space-y-1">
-                      <button className="w-full py-1 border rounded text-xs" onClick={() => {
-                        const amount = prompt("Amount to give:");
-                        if (!amount) return;
-                        const recipientId = prompt("Enter recipient player name:");
-                        // Simplified — would need recipient selector
-                        const recipients = Object.entries(players).filter(([id]) => id !== currentPlayerId);
-                        if (recipients.length > 0) giveMoney(recipients[0][0], +amount);
-                      }}>Give Money</button>
-                      <button className="w-full py-1 border rounded text-xs" onClick={giveNo}>Back</button>
+                      <strong className="text-xs">Select recipient:</strong>
+                      {Object.entries(players).filter(([id]) => id !== currentPlayerId).map(([recipientId, recipient]) => (
+                        <div key={recipientId} className="border rounded p-1.5 space-y-1">
+                          <div className="text-xs font-bold flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full inline-block" style={{ backgroundColor: recipient.color }} />
+                            {recipient.name}
+                          </div>
+                          <button className="w-full py-1 border rounded text-xs hover:bg-accent" onClick={() => {
+                            const amount = prompt(`Give money to ${recipient.name}.\nYou have: $${player.money}\nAmount:`);
+                            if (amount && +amount > 0) giveMoney(recipientId, +amount);
+                          }}>💰 Give Money</button>
+                          {player.inventory && Object.entries(player.inventory).map(([resource, qty]) => (
+                            <button key={resource} className="w-full py-1 border rounded text-xs hover:bg-accent" onClick={() => {
+                              const amount = prompt(`Give ${resource} to ${recipient.name}.\nYou have: ${qty}\nAmount:`);
+                              if (amount && +amount > 0) giveResource(recipientId, resource, +amount);
+                            }}>📦 {resource} ({qty})</button>
+                          ))}
+                        </div>
+                      ))}
+                      <button className="w-full py-1 border rounded text-xs" onClick={giveNo}>Done Giving</button>
                     </div>
                   )}
                   {currentPhase === 1 && (
