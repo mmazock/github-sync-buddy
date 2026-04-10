@@ -1,90 +1,100 @@
 import type { BotPersonality, DifficultyLevel } from "./gameTypes";
 
 export const waterSquares = new Set([
+  // Atlantic Ocean
   ...Array.from({ length: 14 }, (_, i) => `A${i}`),
-  ...Array.from({ length: 14 }, (_, i) => `B${i}`),
-  "C0","C1","C2","C3","C6","C7","C8","C9","C10","C11","C12","C13",
-  "D0","D1","D2","D3","D6","D7","D8","D9","D10","D11","D12","D13",
-  "E2","E3","E7","E8","E9","E10","E11","E12","E13",
-  "F3","F10","F11","F12","F13",
-  "G3","G4","G5","G8","G9","G10","G11","G12","G13",
-  "H5","H6","H7","H8","H9","H10","H11","H12","H13",
-  "I4","I5","I6","I7","I8","I9","I10","I11","I12","I13",
-  ...Array.from({ length: 10 }, (_, i) => `J${i + 4}`),
-  ...Array.from({ length: 10 }, (_, i) => `K${i + 4}`),
-  ...Array.from({ length: 10 }, (_, i) => `L${i + 4}`),
-  ...Array.from({ length: 10 }, (_, i) => `M${i + 4}`),
-  ...Array.from({ length: 9 }, (_, i) => `N${i + 5}`),
-  ...Array.from({ length: 10 }, (_, i) => `O${i + 4}`),
-  "P3","P4","P5","P6","P7","P8","P10","P11","P12","P13",
-  "Q3","Q4","Q5","Q6","Q7","Q8","Q10","Q11","Q12","Q13",
-  "R3","R4","R5","R6","R7","R8","R11","R12","R13",
-  ...Array.from({ length: 12 }, (_, i) => `S${i + 2}`)
+  "B0","B1","B2","B3","B4","B8","B9","B10","B11","B12","B13",
+  "C0","C7","C8","C9","C10","C11","C12","C13",
+  // Mediterranean Sea
+  "D0","D4","E3","E4","F3","F4","G3",
+  // South Atlantic
+  "D9","D10","D11","D12","D13",
+  "E13",
+  "F13",
+  // Red Sea
+  "G5","H5",
+  // Indian Ocean
+  "G11","G12","G13",
+  "H9","H10","H11","H12","H13",
+  "I7","I8","I9","I10","I11","I12","I13",
+  "J6","J7","J8","J9","J10","J11","J12","J13",
+  "K8","K9","K10","K11","K12","K13",
+  "L7","L8","L9","L10","L11","L12","L13",
+  "M7","M8","M9","M10","M11","M12","M13",
+  // Bay of Bengal / South China Sea
+  "N8","N9","N10","N11","N12","N13",
+  "O7","O8","O9","O10","O12","O13",
+  // Pacific Ocean
+  "P6","P7","P8","P9","P13",
+  "Q5","Q6","Q7","Q8","Q9","Q13",
+  "R3","R4","R5","R6","R7","R8","R13",
+  "S1","S2","S3","S4","S5","S6","S7","S8","S9","S10","S13"
 ]);
 
 export const restrictedTransitions: Record<string, string[]> = {
-  "D1": ["D0"],
-  "C1": ["C0", "B1", "C2"],
-  "C2": ["C3", "B2", "C1"],
-  "D2": ["E2", "D3"],
-  "H5": ["G5", "I5"],
-  "H6": ["I6", "H7"],
-  "K4": ["J4", "K5"],
-  "K5": ["K6", "K4", "J5"],
-  "L5": ["L4", "M5", "L6"],
-  "L4": ["M4", "L5"],
-  "M5": ["M4", "L5", "M6"],
-  "M7": ["M6", "M8", "L7"],
-  "N5": ["N6", "O5"],
-  "N7": ["N6", "O7"],
-  "P7": ["P6", "O7", "Q7"],
-  "P8": ["O8"],
-  "Q8": ["Q7", "R8"]
+  // Strait of Gibraltar
+  "C3": ["B3", "C2", "D3"],
+  // Mediterranean narrows
+  "E2": ["D2", "E1", "E3"],
+  // Suez Canal area - between Mediterranean (F3) and Red Sea (G5)
+  "F3": ["E3", "F2", "G3"],
+  "G4": ["G3", "G5", "F4", "H4"],
+  // Red Sea / Horn of Africa
+  "G6": ["G5", "G7", "H6"],
+  // Southeast Asian straits
+  "N7": ["N6", "N8", "O7"],
+  "O6": ["N6", "O5", "P6"]
 };
 
 export const harvestZones: Record<string, { region: string; countries: string[]; special?: string }> = {
+  // West Africa coast (adjacent to C7 water, B8 water)
   "C6": { region: "West Africa", countries: ["Liberia", "Côte d'Ivoire", "Cote D'Ivoire", "Cote DIvoire", "Cote Divoire", "Ivory Coast", "Ghana"] },
-  "D6": { region: "West Africa", countries: ["Togo", "Benin", "Nigeria", "Cameroon"] },
-  "E7": { region: "Central Africa", countries: ["Gabon", "Republic of the Congo", "Democratic Republic of the Congo", "Angola"] },
-  "E8": { region: "Central Africa", countries: ["Angola", "Namibia"] },
-  "E9": { region: "Southern Africa", countries: ["Namibia", "South Africa"] },
-  "E10": { region: "Southern Africa", countries: ["South Africa"], special: "diamonds" },
-  "F10": { region: "Southern Africa", countries: ["South Africa"] },
+  "D7": { region: "West Africa", countries: ["Togo", "Benin", "Nigeria", "Cameroon"] },
+  // Central Africa coast (adjacent to D9 water)
+  "D8": { region: "Central Africa", countries: ["Gabon", "Republic of the Congo", "Democratic Republic of the Congo", "Angola"] },
+  "E12": { region: "Central Africa", countries: ["Angola", "Namibia"] },
+  // Southern Africa coast
+  "F12": { region: "Southern Africa", countries: ["Namibia", "South Africa"] },
+  "G10": { region: "Southern Africa", countries: ["South Africa"], special: "diamonds" },
   "G9": { region: "Southern Africa", countries: ["South Africa", "Mozambique"] },
-  "G8": { region: "Southern Africa", countries: ["Mozambique"] },
-  "H7": { region: "Eastern Africa", countries: ["Kenya"] },
-  "H6": { region: "Eastern Africa", countries: ["Somalia", "Kenya"] },
-  "I5": { region: "Arabian Peninsula", countries: ["Yemen", "Oman"] },
-  "I4": { region: "Arabian Peninsula", countries: ["Oman", "United Arab Emirates", "Qatar", "Bahrain", "Saudi Arabia", "Iran"] },
-  "J4": { region: "Indian Subcontinent", countries: ["Iran", "Pakistan", "India"] },
-  "K4": { region: "Indian Subcontinent", countries: ["India"] },
-  "K5": { region: "Indian Subcontinent", countries: ["India"] },
+  // Eastern Africa coast (adjacent to H9/H10/G11 water)
+  "H8": { region: "Eastern Africa", countries: ["Mozambique", "Tanzania"] },
+  "H6": { region: "Eastern Africa", countries: ["Kenya", "Somalia"] },
+  "G6": { region: "Eastern Africa", countries: ["Somalia", "Kenya", "Ethiopia"] },
+  // Arabian Peninsula coast (adjacent to G5/H5/I7 water)
+  "I6": { region: "Arabian Peninsula", countries: ["Yemen", "Oman"] },
+  "I5": { region: "Arabian Peninsula", countries: ["Oman", "United Arab Emirates", "Qatar", "Bahrain", "Saudi Arabia", "Iran"] },
+  // Indian Subcontinent coast (adjacent to J6/K8/L7 water)
+  "J5": { region: "Indian Subcontinent", countries: ["Iran", "Pakistan", "India"] },
+  "K7": { region: "Indian Subcontinent", countries: ["India"] },
   "K6": { region: "Indian Subcontinent", countries: ["India"] },
-  "L5": { region: "Indian Subcontinent", countries: ["India"] },
-  "L4": { region: "Indian Subcontinent", countries: ["India", "Bangladesh"] },
-  "M4": { region: "Indian Subcontinent", countries: ["India", "Bangladesh", "Myanmar"] },
-  "M5": { region: "Southeast Asia", countries: ["Myanmar"] },
-  "N5": { region: "Southeast Asia", countries: ["Thailand", "Cambodia", "Vietnam"] },
-  "O4": { region: "China", countries: ["China"] },
-  "P4": { region: "China", countries: ["China"] },
-  "P3": { region: "China", countries: ["China", "North Korea", "South Korea"] },
-  "Q3": { region: "Japan", countries: ["Japan"] },
-  "R3": { region: "Japan", countries: ["Japan"] }
+  "L6": { region: "Indian Subcontinent", countries: ["India", "Sri Lanka"] },
+  "M6": { region: "Indian Subcontinent", countries: ["India", "Bangladesh", "Myanmar"] },
+  // Southeast Asia coast (adjacent to N8/O7 water)
+  "N7": { region: "Southeast Asia", countries: ["Myanmar", "Thailand", "Cambodia", "Vietnam", "Malaysia"] },
+  // China coast (adjacent to P6/Q5 water)
+  "O6": { region: "China", countries: ["China"] },
+  "P5": { region: "China", countries: ["China"] },
+  "Q3": { region: "China", countries: ["China", "North Korea", "South Korea"] },
+  // Japan coast (adjacent to Q5/R3 water)
+  "Q4": { region: "Japan", countries: ["Japan"] },
+  "R2": { region: "Japan", countries: ["Japan"] }
 };
 
 export const factoryZones: Record<string, string[]> = {
-  "P3": ["Technology", "Automobile", "Steel"],
-  "Q3": ["Technology", "Automobile"],
-  "R3": ["Technology", "Automobile"],
-  "L4": ["Technology", "Clothes"],
-  "O4": ["Automobile", "Steel"],
-  "K5": ["Steel"],
-  "L5": ["Steel", "Clothes"],
-  "P4": ["Steel"],
-  "M4": ["Clothes"],
-  "M5": ["Clothes"],
-  "N5": ["Clothes"],
-  "K6": ["Clothes"]
+  // Japan/Korea - high tech
+  "Q4": ["Technology", "Automobile"],
+  "R2": ["Technology", "Automobile"],
+  "Q3": ["Technology", "Automobile", "Steel"],
+  // China - manufacturing
+  "O6": ["Automobile", "Steel"],
+  "P5": ["Steel"],
+  // India - textiles & tech
+  "L6": ["Technology", "Clothes", "Steel"],
+  "K6": ["Steel"],
+  // Southeast Asia - clothes
+  "M6": ["Clothes"],
+  "N7": ["Clothes"]
 };
 
 export const regionResources: Record<string, string[]> = {
@@ -131,7 +141,7 @@ export const countryData: Record<string, { home: string; multipliers: Record<str
     multipliers: { "Automobiles": 1.5, "Clothes": 1.5, "Copper": 2, "Gold": 1.5, "Spices": 0.5 }
   },
   Portugal: {
-    home: "C3",
+    home: "B5",
     multipliers: { "Ivory": 0.5, "Rice": 2, "Silk": 1.5, "Steel": 1.5, "Technology": 1.5 }
   },
   England: {
@@ -139,7 +149,7 @@ export const countryData: Record<string, { home: string; multipliers: Record<str
     multipliers: { "Copper": 0.5, "Gold": 0.5, "Porcelain": 2, "Silk": 2 }
   },
   France: {
-    home: "D2",
+    home: "D3",
     multipliers: { "Cotton": 1.5, "Ivory": 0.5, "Rice": 1.5, "Spices": 0.5 }
   },
   Italy: {

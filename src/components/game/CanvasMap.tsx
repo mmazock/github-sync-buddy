@@ -122,6 +122,45 @@ export default function CanvasMap() {
     const cellW = cellSize.w * sx;
     const cellH = cellSize.h * sy;
 
+    // Draw grid lines so players can see individual squares
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.2)";
+    ctx.lineWidth = 0.8;
+
+    // Vertical grid lines between columns
+    for (let i = 0; i < columnPixels.length; i++) {
+      const cx = columnPixels[i].x * sx;
+      // Draw line at left and right edges of each column
+      const leftEdge = cx - cellW / 2;
+      const rightEdge = cx + cellW / 2;
+      ctx.beginPath();
+      ctx.moveTo(leftEdge, 0);
+      ctx.lineTo(leftEdge, displayHeight);
+      ctx.stroke();
+      if (i === columnPixels.length - 1) {
+        ctx.beginPath();
+        ctx.moveTo(rightEdge, 0);
+        ctx.lineTo(rightEdge, displayHeight);
+        ctx.stroke();
+      }
+    }
+
+    // Horizontal grid lines between rows
+    for (let i = 0; i < rowPixels.length; i++) {
+      const cy = rowPixels[i].y * sy;
+      const topEdge = cy - cellH / 2;
+      const bottomEdge = cy + cellH / 2;
+      ctx.beginPath();
+      ctx.moveTo(0, topEdge);
+      ctx.lineTo(displayWidth, topEdge);
+      ctx.stroke();
+      if (i === rowPixels.length - 1) {
+        ctx.beginPath();
+        ctx.moveTo(0, bottomEdge);
+        ctx.lineTo(displayWidth, bottomEdge);
+        ctx.stroke();
+      }
+    }
+
     // Draw blue grid labels on canvas
     const labelColor = "rgba(20, 60, 140, 0.85)";
     ctx.fillStyle = labelColor;
