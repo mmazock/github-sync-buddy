@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { gamesRef, child, push, set, update, remove, get, onValue, runTransaction } from "@/lib/firebase";
-import type { GameData, PlayerData, Deal, BotProposal } from "@/lib/gameTypes";
+import type { GameData, PlayerData, Deal, BotProposal, DealHistoryEntry } from "@/lib/gameTypes";
 import {
   countryData, availableColors, waterSquares, restrictedTransitions,
   harvestZones, factoryZones, regionResources, baseResourceValues,
@@ -54,6 +54,8 @@ interface GameContextType {
   cashInSummary: string | null;
   dismissBotProposal: (index: number) => void;
   giveSuez: (recipientId: string) => Promise<void>;
+  persistConversation: (botId: string, messages: Array<{ role: string; content: string }>) => Promise<void>;
+  addDealHistory: (entry: DealHistoryEntry) => Promise<void>;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -149,6 +151,38 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
   }, []);
+
+  // Persist conversation history to Firebase
+  const persistConversation = useCallback(async (botId: string, messages: Array<{ role: string; content: string }>) => {
+    if (!currentGameCode) return;
+    // Keep last 20 messages per bot to avoid bloating Firebase
+    const trimmed = messages.slice(-20);
+    await update(child(gamesRef, `${currentGameCode}/conversationHistories/${botId}`), 
+      Object.fromEntries(trimmed.map((m, i) => [i, m]))
+    );
+    setBotConversationHistories(prev => ({ ...prev, [botId]: trimmed }));
+  }, [currentGameCode]);
+
+  // Add a deal history entry to Firebase
+  const addDealHistory = useCallback(async (entry: DealHistoryEntry) => {
+    if (!currentGameCode) return;
+    await push(child(gamesRef, `${currentGameCode}/dealHistory`), entry);
+  }, [currentGameCode]);
+
+  // Load conversation histories from Firebase when game data changes
+  useEffect(() => {
+    if (!gameData?.conversationHistories) return;
+    const histories: Record<string, Array<{ role: string; content: string }>> = {};
+    for (const botId in gameData.conversationHistories) {
+      const raw = gameData.conversationHistories[botId];
+      if (Array.isArray(raw)) {
+        histories[botId] = raw;
+      } else if (raw && typeof raw === "object") {
+        histories[botId] = Object.values(raw);
+      }
+    }
+    setBotConversationHistories(histories);
+  }, [gameData?.conversationHistories]);
 
   const addGameLog = useCallback(async (message: string) => {
     if (!currentGameCode) return;
@@ -1489,7 +1523,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     rollAttack, rollDefense, battleContinue, battleDestroy, battlePlunder, battleMoveOn, battleDisplace,
     grantAccess, denyAccess, acknowledgePermission, readyUp, startGame,
     addGameLog, cashInContinue, showingUpgradeMenu, harvestSelectionState, cashInSummary,
-    dismissBotProposal
+    dismissBotProposal, persistConversation, addDealHistory
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;
