@@ -440,7 +440,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (!waterSquares.has(target)) return;
 
     // Suez
-    if ((currentPos === "G3" && target === "G4") || (currentPos === "G4" && target === "G3")) {
+    if ((currentPos === "H3" && target === "H4") || (currentPos === "H4" && target === "H3")) {
       if (!data.suezOwner) return;
       if (data.suezOwner !== currentPlayerId) {
         await update(child(gamesRef, currentGameCode), {
@@ -1208,7 +1208,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
       // Suez Canal permission check for bots
       const currentBotPos = freshBot.shipPosition;
-      if ((currentBotPos === "G3" && target === "G4") || (currentBotPos === "G4" && target === "G3")) {
+      if ((currentBotPos === "H3" && target === "H4") || (currentBotPos === "H4" && target === "H3")) {
         if (!freshData.suezOwner) break; // Suez not built yet
         if (freshData.suezOwner !== botId) {
           const suezOwner = freshData.players[freshData.suezOwner];
@@ -1319,7 +1319,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (visited.has(next)) continue;
         if (!waterSquares.has(next)) continue;
         if (restrictedTransitions[pos] && !restrictedTransitions[pos].includes(next)) continue;
-        if ((pos === "G3" && next === "G4") || (pos === "G4" && next === "G3")) {
+        if ((pos === "H3" && next === "H4") || (pos === "H4" && next === "H3")) {
           if (!data.suezOwner) continue;
         }
         if (next === to) return dist + 1;
@@ -1338,7 +1338,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const target = String.fromCharCode(col + dc) + (row + dr);
       if (!waterSquares.has(target)) continue;
       if (restrictedTransitions[currentPos] && !restrictedTransitions[currentPos].includes(target)) continue;
-      if ((currentPos === "G3" && target === "G4") || (currentPos === "G4" && target === "G3")) {
+      if ((currentPos === "H3" && target === "H4") || (currentPos === "H4" && target === "H3")) {
         if (!data.suezOwner) continue;
       }
       adjacent.push(target);

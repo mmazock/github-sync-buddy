@@ -5,7 +5,7 @@ import {
   harvestZones, factoryZones, countryData, waterSquares
 } from "@/lib/gameData";
 
-const COL_LETTERS = "ABCDEFGHIJKLMNOPQRS".split("");
+const COL_LETTERS = "ABCDEFGHIJKLMNOPQRST".split("");
 
 // Home port labels
 const HOME_PORTS: Record<string, string> = {};
@@ -265,8 +265,8 @@ export default function CanvasMap() {
     if (gameData?.suezOwner) {
       const owner = gameData.players[gameData.suezOwner];
       if (owner) {
-        const g3 = gridToPixel("G", 3);
-        const g4 = gridToPixel("G", 4);
+        const g3 = gridToPixel("H", 3);
+        const g4 = gridToPixel("H", 4);
         const color = PLAYER_COLORS[owner.color] || owner.color;
         ctx.strokeStyle = color;
         ctx.lineWidth = 3;
