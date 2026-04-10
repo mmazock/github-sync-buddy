@@ -122,6 +122,32 @@ export default function CanvasMap() {
     const cellW = cellSize.w * sx;
     const cellH = cellSize.h * sy;
 
+    // Draw blue grid labels on canvas
+    const labelColor = "rgba(20, 60, 140, 0.85)";
+    ctx.fillStyle = labelColor;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    // Column letters at bottom
+    ctx.font = `bold ${Math.round(cellH * 0.35)}px sans-serif`;
+    for (const cp of columnPixels) {
+      const lx = cp.x * sx;
+      const ly = (originalHeight - 3) * sy;
+      ctx.fillStyle = labelColor;
+      ctx.fillText(cp.letter, lx, ly);
+    }
+
+    // Row numbers on left
+    ctx.font = `bold ${Math.round(cellH * 0.32)}px sans-serif`;
+    for (const rp of rowPixels) {
+      const lx = 3 * sx;
+      const ly = rp.y * sy;
+      ctx.fillStyle = labelColor;
+      ctx.fillText(String(rp.row), lx, ly);
+    }
+    ctx.textBaseline = "alphabetic";
+    ctx.textAlign = "left";
+
     // Draw zone overlays
     for (const col of COL_LETTERS) {
       for (let row = 0; row <= 13; row++) {
@@ -141,13 +167,24 @@ export default function CanvasMap() {
           ctx.strokeRect(x, y, cellW, cellH);
         }
 
-        // Factory zone highlight
+        // Factory zone highlight (also harvestable - shown with dual color)
         if (factoryZones[sq]) {
-          ctx.fillStyle = "rgba(251, 191, 36, 0.25)";
-          ctx.fillRect(x, y, cellW, cellH);
-          ctx.strokeStyle = "rgba(251, 191, 36, 0.6)";
-          ctx.lineWidth = 1.5;
-          ctx.strokeRect(x, y, cellW, cellH);
+          if (harvestZones[sq]) {
+            // Dual zone: factory + harvest - use striped/combined indicator
+            ctx.fillStyle = "rgba(251, 191, 36, 0.2)";
+            ctx.fillRect(x, y, cellW, cellH);
+            ctx.fillStyle = "rgba(34, 197, 94, 0.15)";
+            ctx.fillRect(x, y, cellW / 2, cellH);
+            ctx.strokeStyle = "rgba(251, 191, 36, 0.6)";
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(x, y, cellW, cellH);
+          } else {
+            ctx.fillStyle = "rgba(251, 191, 36, 0.25)";
+            ctx.fillRect(x, y, cellW, cellH);
+            ctx.strokeStyle = "rgba(251, 191, 36, 0.6)";
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(x, y, cellW, cellH);
+          }
         }
 
         // Home port highlight
