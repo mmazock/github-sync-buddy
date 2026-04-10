@@ -387,11 +387,21 @@ export default function GameLedger() {
                     }}>⛏️ Harvest</button>
                   )}
                   {currentPhase === 2 && onFactory && player.movesRemaining > 0 && (
-                    <button className="py-1 px-3 border rounded text-xs" onClick={async () => {
-                      const goods = factoryZones[player.shipPosition];
-                      const good = goods[0]; // Simplified
-                      await manufacture(good);
-                    }}>🏭 Manufacture</button>
+                    <div className="flex flex-wrap gap-1">
+                      {factoryZones[player.shipPosition].map(good => (
+                        <button key={good} className="py-1 px-2 border rounded text-xs hover:bg-accent" onClick={async () => {
+                          const recipe = manufacturingRecipes[good];
+                          if (!recipe) return;
+                          const inv = player.inventory || {};
+                          const missing = recipe.inputs.filter(r => !(inv[r] && inv[r] >= 1));
+                          if (missing.length > 0) {
+                            alert(`Need: ${recipe.inputs.join(", ")}\nMissing: ${missing.join(", ")}`);
+                            return;
+                          }
+                          await manufacture(good);
+                        }}>🏭 {good}</button>
+                      ))}
+                    </div>
                   )}
                 </div>
               )}
