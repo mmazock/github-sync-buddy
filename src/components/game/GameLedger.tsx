@@ -42,13 +42,13 @@ export default function GameLedger() {
     return (
       <>
         {showTutorial && <TutorialMode onClose={() => setShowTutorial(false)} />}
-        <div className="w-[300px] border-2 border-foreground p-3 shrink-0 text-sm overflow-y-auto max-h-[85vh]">
-          <h2 className="font-bold text-lg mb-3">Game Setup</h2>
+        <div className="w-[320px] bg-slate-800/80 backdrop-blur border border-blue-800/30 rounded-lg p-4 shrink-0 text-sm overflow-y-auto max-h-[85vh] shadow-xl">
+          <h2 className="font-bold text-lg mb-3 text-amber-200">Game Setup</h2>
 
           {/* Tutorial button */}
           <button
             onClick={() => setShowTutorial(true)}
-            className="w-full py-2.5 px-3 bg-accent text-accent-foreground rounded mb-3 flex items-center justify-center gap-2 hover:bg-accent/80 transition-colors font-medium"
+            className="w-full py-2.5 px-3 bg-blue-800/50 text-blue-200 border border-blue-600/30 rounded-lg mb-3 flex items-center justify-center gap-2 hover:bg-blue-700/50 transition-colors font-medium"
           >
             📖 How to Play (Tutorial)
           </button>
@@ -56,19 +56,19 @@ export default function GameLedger() {
           {!showHostSetup ? (
             <button
               onClick={() => setShowHostSetup(true)}
-              className="w-full py-2 px-3 bg-primary text-primary-foreground rounded mb-4"
+              className="w-full py-2 px-3 bg-amber-600 text-white rounded-lg mb-4 hover:bg-amber-500 transition-colors"
             >
               Create Game (Host)
             </button>
           ) : (
             <div className="mb-4 space-y-2">
-              <input className="w-full border rounded px-2 py-1" placeholder="Your Name" value={hostName} onChange={e => setHostName(e.target.value)} />
-              <select className="w-full border rounded px-2 py-1" value={hostCountry} onChange={e => setHostCountry(e.target.value)}>
+              <input className="w-full border border-blue-700/40 bg-slate-700/50 text-white rounded-lg px-3 py-1.5 placeholder:text-blue-300/50" placeholder="Your Name" value={hostName} onChange={e => setHostName(e.target.value)} />
+              <select className="w-full border border-blue-700/40 bg-slate-700/50 text-white rounded-lg px-3 py-1.5" value={hostCountry} onChange={e => setHostCountry(e.target.value)}>
                 <option value="">Select Country</option>
                 {countries.map(c => <option key={c} value={c}>{c}</option>)}
               </select>
               <button
-                className="w-full py-2 bg-primary text-primary-foreground rounded"
+                className="w-full py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-500 transition-colors font-medium"
                 onClick={() => hostName && hostCountry && createGame(hostName, hostCountry)}
               >
                 Host Game
@@ -78,14 +78,14 @@ export default function GameLedger() {
 
           <hr className="my-3" />
           <div className="space-y-2">
-            <input className="w-full border rounded px-2 py-1" placeholder="Join Code" value={joinCode} onChange={e => setJoinCode(e.target.value)} />
-            <input className="w-full border rounded px-2 py-1" placeholder="Your Name" value={playerName} onChange={e => setPlayerName(e.target.value)} />
-            <select className="w-full border rounded px-2 py-1" value={country} onChange={e => setCountry(e.target.value)}>
+            <input className="w-full border border-blue-700/40 bg-slate-700/50 text-white rounded-lg px-3 py-1.5 placeholder:text-blue-300/50" placeholder="Join Code" value={joinCode} onChange={e => setJoinCode(e.target.value)} />
+            <input className="w-full border border-blue-700/40 bg-slate-700/50 text-white rounded-lg px-3 py-1.5 placeholder:text-blue-300/50" placeholder="Your Name" value={playerName} onChange={e => setPlayerName(e.target.value)} />
+            <select className="w-full border border-blue-700/40 bg-slate-700/50 text-white rounded-lg px-3 py-1.5" value={country} onChange={e => setCountry(e.target.value)}>
               <option value="">Select Country</option>
               {countries.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
             <button
-              className="w-full py-2 bg-primary text-primary-foreground rounded"
+              className="w-full py-2 bg-amber-600 text-white rounded-lg hover:bg-amber-500 transition-colors font-medium"
               onClick={async () => {
                 const err = await joinGame(joinCode, playerName, country);
                 if (err) alert(err);
@@ -99,14 +99,14 @@ export default function GameLedger() {
     );
   }
 
-  if (!gameData) return <div className="w-[300px] border-2 border-foreground p-3">Loading...</div>;
+  if (!gameData) return <div className="w-[320px] bg-slate-800/80 backdrop-blur border border-blue-800/30 rounded-lg p-4">Loading...</div>;
 
   // Lobby
   if (gameData.gameState === "lobby") {
     const players = gameData.players || {};
     return (
-      <div className="w-[300px] border-2 border-foreground p-3 shrink-0 text-sm overflow-y-auto max-h-[85vh]">
-        <h2 className="font-bold text-lg">Game Lobby</h2>
+      <div className="w-[320px] bg-slate-800/80 backdrop-blur border border-blue-800/30 rounded-lg p-4 shrink-0 text-sm overflow-y-auto max-h-[85vh] shadow-xl">
+        <h2 className="font-bold text-lg text-amber-200">Game Lobby</h2>
         <p className="font-mono mt-1">Join Code: <strong>{currentGameCode}</strong></p>
         <hr className="my-2" />
         <strong>Players:</strong>
@@ -197,8 +197,8 @@ export default function GameLedger() {
   if (gameData.gameState === "gameOver" && gameData.winnerId) {
     const winner = gameData.players[gameData.winnerId];
     return (
-      <div className="w-[300px] border-2 border-foreground p-3 shrink-0 text-center">
-        <h1 className="text-2xl font-bold text-destructive">GAME OVER</h1>
+      <div className="w-[320px] bg-slate-800/80 backdrop-blur border border-blue-800/30 rounded-lg p-4 shrink-0 text-center shadow-xl">
+        <h1 className="text-2xl font-bold text-red-400">GAME OVER</h1>
         <h2 className="text-xl font-bold mt-2">{winner?.name} wins!</h2>
         <button className="mt-4 py-2 px-4 bg-primary text-primary-foreground rounded" onClick={leaveGame}>Leave</button>
       </div>
@@ -238,12 +238,12 @@ export default function GameLedger() {
   }
 
   return (
-    <div className="w-[300px] border-2 border-foreground p-3 shrink-0 text-sm overflow-y-auto max-h-[85vh]">
-      <p className="font-mono text-xs mb-1">Join Code: <strong className="text-primary select-all">{currentGameCode}</strong></p>
-      <p className="font-bold">Round {roundNumber} — {phaseNames[currentPhase]}</p>
-      <div className="flex gap-2 mt-1">
-        <button className="py-1 px-2 bg-primary text-primary-foreground rounded text-xs" onClick={endPhase}>End Phase</button>
-        <button className="py-1 px-2 bg-destructive text-destructive-foreground rounded text-xs" onClick={leaveGame}>Leave</button>
+    <div className="w-[320px] bg-slate-800/80 backdrop-blur border border-blue-800/30 rounded-lg p-4 shrink-0 text-sm overflow-y-auto max-h-[85vh] shadow-xl">
+      <p className="font-mono text-xs mb-1 text-blue-300/70">Join Code: <strong className="text-amber-300 select-all">{currentGameCode}</strong></p>
+      <p className="font-bold text-blue-100">Round {roundNumber} — <span className="text-amber-200">{phaseNames[currentPhase]}</span></p>
+      <div className="flex gap-2 mt-2">
+        <button className="py-1.5 px-3 bg-blue-700/60 text-blue-100 border border-blue-600/40 rounded-lg text-xs hover:bg-blue-600/60 transition-colors" onClick={endPhase}>End Phase</button>
+        <button className="py-1.5 px-3 bg-red-900/50 text-red-300 border border-red-700/40 rounded-lg text-xs hover:bg-red-800/50 transition-colors" onClick={leaveGame}>Leave</button>
       </div>
 
       {/* Cash in summary */}
@@ -387,11 +387,21 @@ export default function GameLedger() {
                     }}>⛏️ Harvest</button>
                   )}
                   {currentPhase === 2 && onFactory && player.movesRemaining > 0 && (
-                    <button className="py-1 px-3 border rounded text-xs" onClick={async () => {
-                      const goods = factoryZones[player.shipPosition];
-                      const good = goods[0]; // Simplified
-                      await manufacture(good);
-                    }}>🏭 Manufacture</button>
+                    <div className="flex flex-wrap gap-1">
+                      {factoryZones[player.shipPosition].map(good => (
+                        <button key={good} className="py-1 px-2 border rounded text-xs hover:bg-accent" onClick={async () => {
+                          const recipe = manufacturingRecipes[good];
+                          if (!recipe) return;
+                          const inv = player.inventory || {};
+                          const missing = recipe.inputs.filter(r => !(inv[r] && inv[r] >= 1));
+                          if (missing.length > 0) {
+                            alert(`Need: ${recipe.inputs.join(", ")}\nMissing: ${missing.join(", ")}`);
+                            return;
+                          }
+                          await manufacture(good);
+                        }}>🏭 {good}</button>
+                      ))}
+                    </div>
                   )}
                 </div>
               )}

@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from "react";
 import { gamesRef, child, push, set, update, remove, get, onValue, runTransaction } from "@/lib/firebase";
-import type { GameData, PlayerData, Deal, BotProposal } from "@/lib/gameTypes";
+import type { GameData, PlayerData, Deal, BotProposal, DealHistoryEntry } from "@/lib/gameTypes";
 import {
   countryData, availableColors, waterSquares, restrictedTransitions,
   harvestZones, factoryZones, regionResources, baseResourceValues,
@@ -54,6 +54,8 @@ interface GameContextType {
   cashInSummary: string | null;
   dismissBotProposal: (index: number) => void;
   giveSuez: (recipientId: string) => Promise<void>;
+  persistConversation: (botId: string, messages: Array<{ role: string; content: string }>) => Promise<void>;
+  addDealHistory: (entry: DealHistoryEntry) => Promise<void>;
 }
 
 const GameContext = createContext<GameContextType | null>(null);
@@ -149,6 +151,38 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       return next;
     });
   }, []);
+
+  // Persist conversation history to Firebase
+  const persistConversation = useCallback(async (botId: string, messages: Array<{ role: string; content: string }>) => {
+    if (!currentGameCode) return;
+    // Keep last 20 messages per bot to avoid bloating Firebase
+    const trimmed = messages.slice(-20);
+    await update(child(gamesRef, `${currentGameCode}/conversationHistories/${botId}`), 
+      Object.fromEntries(trimmed.map((m, i) => [i, m]))
+    );
+    setBotConversationHistories(prev => ({ ...prev, [botId]: trimmed }));
+  }, [currentGameCode]);
+
+  // Add a deal history entry to Firebase
+  const addDealHistory = useCallback(async (entry: DealHistoryEntry) => {
+    if (!currentGameCode) return;
+    await push(child(gamesRef, `${currentGameCode}/dealHistory`), entry);
+  }, [currentGameCode]);
+
+  // Load conversation histories from Firebase when game data changes
+  useEffect(() => {
+    if (!gameData?.conversationHistories) return;
+    const histories: Record<string, Array<{ role: string; content: string }>> = {};
+    for (const botId in gameData.conversationHistories) {
+      const raw = gameData.conversationHistories[botId];
+      if (Array.isArray(raw)) {
+        histories[botId] = raw;
+      } else if (raw && typeof raw === "object") {
+        histories[botId] = Object.values(raw);
+      }
+    }
+    setBotConversationHistories(histories);
+  }, [gameData?.conversationHistories]);
 
   const addGameLog = useCallback(async (message: string) => {
     if (!currentGameCode) return;
@@ -406,7 +440,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     if (!waterSquares.has(target)) return;
 
     // Suez
-    if ((currentPos === "G3" && target === "G4") || (currentPos === "G4" && target === "G3")) {
+    if ((currentPos === "H3" && target === "H4") || (currentPos === "H4" && target === "H3")) {
       if (!data.suezOwner) return;
       if (data.suezOwner !== currentPlayerId) {
         await update(child(gamesRef, currentGameCode), {
@@ -889,6 +923,31 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (!activePlayerId) return;
       const activePlayer = data.players?.[activePlayerId];
 
+      // Handle permission requests where the owner is a bot — auto-respond
+      if (data.permissionRequest && !data.permissionResult) {
+        const request = data.permissionRequest;
+        const owner = data.players[request.ownerId];
+        if (owner?.isBot) {
+          await new Promise(r => setTimeout(r, 1000));
+          const ownerPersonalityId = BOT_PERSONALITIES[owner.personality!] ? owner.personality! : "putin";
+          const ownerPersonality = BOT_PERSONALITIES[ownerPersonalityId];
+          const ownerTrust = botTrustScores[request.ownerId]?.[request.requesterId] || 50;
+          const grantChance = (ownerTrust / 100) * ownerPersonality.loyalty;
+          if (Math.random() < grantChance) {
+            await grantAccess();
+            await addGameLog(`${owner.name} granted passage to ${data.players[request.requesterId]?.name}`);
+          } else {
+            await denyAccess();
+            await addGameLog(`${owner.name} denied passage to ${data.players[request.requesterId]?.name}`);
+          }
+          const freshSnap = await get(child(gamesRef, currentGameCode!));
+          const freshData = freshSnap.val() as GameData;
+          if (!freshData || freshData.hostId !== currentPlayerId || freshData.gameState !== "active") return;
+          data = freshData;
+          continue;
+        }
+      }
+
       if (!activePlayer?.isBot) {
         // Handle bot battle responses when it's a human's turn but bot is in battle
         if (data.battle) {
@@ -1147,6 +1206,67 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         break;
       }
 
+      // Suez Canal permission check for bots
+      const currentBotPos = freshBot.shipPosition;
+      if ((currentBotPos === "H3" && target === "H4") || (currentBotPos === "H4" && target === "H3")) {
+        if (!freshData.suezOwner) break; // Suez not built yet
+        if (freshData.suezOwner !== botId) {
+          const suezOwner = freshData.players[freshData.suezOwner];
+          if (suezOwner?.isBot) {
+            // Bot-to-bot: owner auto-decides based on trust
+            const ownerPersonalityId = BOT_PERSONALITIES[suezOwner.personality!] ? suezOwner.personality! : "putin";
+            const ownerPersonality = BOT_PERSONALITIES[ownerPersonalityId];
+            const ownerTrust = botTrustScores[freshData.suezOwner]?.[botId] || 50;
+            const grantChance = (ownerTrust / 100) * ownerPersonality.loyalty;
+            if (Math.random() < grantChance) {
+              await addGameLog(`\u2693 ${suezOwner.name} granted ${freshBot.name} passage through the Suez Canal`);
+            } else {
+              await addGameLog(`\u26D4 ${suezOwner.name} denied ${freshBot.name} passage through the Suez Canal`);
+              break; // Can't pass, stop moving
+            }
+          } else {
+            // Bot requesting from human — create permission request and wait
+            await update(child(gamesRef, currentGameCode), {
+              permissionRequest: {
+                type: "suez", requesterId: botId,
+                ownerId: freshData.suezOwner, square: target, round: freshData.round
+              }
+            });
+            await addGameLog(`\u2693 ${freshBot.name} requests permission to use the Suez Canal`);
+            return; // Stop bot movement, wait for human response
+          }
+        }
+      }
+
+      // Dictatorship permission check for bots
+      const dictOwner = (freshData.dictatorships || {})[target];
+      if (dictOwner && dictOwner !== botId) {
+        const dictPlayer = freshData.players[dictOwner];
+        if (dictPlayer?.isBot) {
+          // Bot-to-bot: owner auto-decides based on trust
+          const ownerPersonalityId = BOT_PERSONALITIES[dictPlayer.personality!] ? dictPlayer.personality! : "putin";
+          const ownerPersonality = BOT_PERSONALITIES[ownerPersonalityId];
+          const ownerTrust = botTrustScores[dictOwner]?.[botId] || 50;
+          const grantChance = (ownerTrust / 100) * ownerPersonality.loyalty;
+          if (Math.random() < grantChance) {
+            await addGameLog(`\uD83C\uDFF0 ${dictPlayer.name} granted ${freshBot.name} passage through ${target}`);
+          } else {
+            await addGameLog(`\u26D4 ${dictPlayer.name} denied ${freshBot.name} passage through ${target}`);
+            break; // Can't pass, stop moving
+          }
+        } else {
+          // Bot requesting from human — create permission request and wait
+          await update(child(gamesRef, currentGameCode), {
+            permissionRequest: {
+              type: "dictatorship", requesterId: botId,
+              ownerId: dictOwner, square: target, round: freshData.round
+            }
+          });
+          await addGameLog(`\uD83C\uDFF0 ${freshBot.name} requests permission to enter ${target}`);
+          return; // Stop bot movement, wait for human response
+        }
+      }
+
       await update(child(gamesRef, `${currentGameCode}/players/${botId}`), { shipPosition: target, movesRemaining: movesLeft - 1 });
       movesLeft--;
       await new Promise(r => setTimeout(r, 400));
@@ -1199,7 +1319,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (visited.has(next)) continue;
         if (!waterSquares.has(next)) continue;
         if (restrictedTransitions[pos] && !restrictedTransitions[pos].includes(next)) continue;
-        if ((pos === "G3" && next === "G4") || (pos === "G4" && next === "G3")) {
+        if ((pos === "H3" && next === "H4") || (pos === "H4" && next === "H3")) {
           if (!data.suezOwner) continue;
         }
         if (next === to) return dist + 1;
@@ -1218,7 +1338,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const target = String.fromCharCode(col + dc) + (row + dr);
       if (!waterSquares.has(target)) continue;
       if (restrictedTransitions[currentPos] && !restrictedTransitions[currentPos].includes(target)) continue;
-      if ((currentPos === "G3" && target === "G4") || (currentPos === "G4" && target === "G3")) {
+      if ((currentPos === "H3" && target === "H4") || (currentPos === "H4" && target === "H3")) {
         if (!data.suezOwner) continue;
       }
       adjacent.push(target);
@@ -1489,7 +1609,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     rollAttack, rollDefense, battleContinue, battleDestroy, battlePlunder, battleMoveOn, battleDisplace,
     grantAccess, denyAccess, acknowledgePermission, readyUp, startGame,
     addGameLog, cashInContinue, showingUpgradeMenu, harvestSelectionState, cashInSummary,
-    dismissBotProposal
+    dismissBotProposal, persistConversation, addDealHistory
   };
 
   return <GameContext.Provider value={value}>{children}</GameContext.Provider>;

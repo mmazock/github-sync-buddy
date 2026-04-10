@@ -29,7 +29,7 @@ export default function NegotiationDialog({
   initialMessage,
   initialDealType,
 }: NegotiationDialogProps) {
-  const { gameData, currentPlayerId, addGameLog, botConversationHistories } = useGame();
+  const { gameData, currentPlayerId, addGameLog, botConversationHistories, persistConversation, addDealHistory } = useGame();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -86,12 +86,24 @@ export default function NegotiationDialog({
     setIsLoading(true);
 
     try {
+      // Build deal history context for AI memory
+      const dealHistoryEntries = gameData?.dealHistory ? Object.values(gameData.dealHistory) : [];
+      const relevantDeals = dealHistoryEntries
+        .filter(d => d.botId === botId || d.playerId === currentPlayerId)
+        .sort((a, b) => a.timestamp - b.timestamp)
+        .slice(-10);
+      const dealHistoryContext = relevantDeals.length > 0
+        ? "\nPAST DEAL HISTORY:\n" + relevantDeals.map(d =>
+          `Round ${d.round}: ${d.action.toUpperCase()} - ${d.summary}`
+        ).join("\n")
+        : "";
+
       const { data, error } = await supabase.functions.invoke("bot-negotiate", {
         body: {
           botPersonality: personality,
           botName: bot.name,
           conversationHistory: newMessages.map(m => ({ role: m.role, content: m.content })),
-          gameContext: buildGameContext(),
+          gameContext: buildGameContext() + dealHistoryContext,
         },
       });
 
@@ -107,15 +119,42 @@ export default function NegotiationDialog({
         content: data.reply,
         dealAction: data.dealAction,
       };
-      setMessages(prev => [...prev, botMsg]);
+      const updatedMessages = [...newMessages, botMsg];
+      setMessages(updatedMessages);
 
-      // Log deal actions
+      // Persist conversation to Firebase so AI remembers across sessions
+      if (botId) {
+        await persistConversation(botId, updatedMessages.map(m => ({ role: m.role, content: m.content })));
+      }
+
+      // Log deal actions and persist deal history
       if (data.dealAction === "accepted") {
-        await addGameLog(`🤝 ${bot.name} accepted a deal with ${player?.name}!`);
+        await addGameLog(`\uD83E\uDD1D ${bot.name} accepted a deal with ${player?.name}!`);
+        await addDealHistory({
+          botId: botId!, botName: bot.name,
+          playerId: currentPlayerId!, playerName: player?.name || "",
+          dealType: "negotiation", action: "accepted",
+          summary: `${bot.name} accepted: ${input.trim().substring(0, 100)}`,
+          round: gameData?.round || 1, timestamp: Date.now()
+        });
       } else if (data.dealAction === "rejected") {
-        await addGameLog(`🚫 ${bot.name} rejected ${player?.name}'s proposal.`);
+        await addGameLog(`\uD83D\uDEAB ${bot.name} rejected ${player?.name}'s proposal.`);
+        await addDealHistory({
+          botId: botId!, botName: bot.name,
+          playerId: currentPlayerId!, playerName: player?.name || "",
+          dealType: "negotiation", action: "rejected",
+          summary: `${bot.name} rejected: ${input.trim().substring(0, 100)}`,
+          round: gameData?.round || 1, timestamp: Date.now()
+        });
       } else if (data.dealAction === "counter_offer") {
-        await addGameLog(`↩️ ${bot.name} made a counter-offer to ${player?.name}.`);
+        await addGameLog(`\u21A9\uFE0F ${bot.name} made a counter-offer to ${player?.name}.`);
+        await addDealHistory({
+          botId: botId!, botName: bot.name,
+          playerId: currentPlayerId!, playerName: player?.name || "",
+          dealType: "negotiation", action: "counter_offer",
+          summary: `${bot.name} counter-offered: ${data.reply.substring(0, 100)}`,
+          round: gameData?.round || 1, timestamp: Date.now()
+        });
       }
     } catch (e) {
       console.error("Negotiation error:", e);

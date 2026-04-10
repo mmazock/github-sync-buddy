@@ -85,6 +85,8 @@ export interface GameData {
     requesterId: string;
     round: number;
   };
+  dealHistory?: Record<string, DealHistoryEntry>;
+  conversationHistories?: Record<string, Array<{ role: string; content: string }>>;
 }
 
 export interface Deal {
@@ -142,3 +144,15 @@ export type BotProposal = {
   dealType: string;
   timestamp: number;
 };
+
+export interface DealHistoryEntry {
+  botId: string;
+  botName: string;
+  playerId: string;
+  playerName: string;
+  dealType: string;
+  action: "accepted" | "rejected" | "counter_offer" | "betrayed";
+  summary: string;
+  round: number;
+  timestamp: number;
+}

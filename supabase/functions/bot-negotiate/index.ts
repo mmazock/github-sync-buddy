@@ -17,6 +17,23 @@ serve(async (req) => {
 
     const { botPersonality, botName, conversationHistory, gameContext } = await req.json();
 
+    // Determine strategic lying behavior based on deception stat
+    const deceptionLevel = botPersonality.deception || 0;
+    const shouldConsiderLying = deceptionLevel > 0.4;
+    const lyingInstructions = shouldConsiderLying
+      ? `\nSTRATEGIC DECEPTION (Deception: ${deceptionLevel}/1.0):
+- You have a strong tendency toward strategic deception. You may lie about your resources, intentions, or plans.
+- You can accept deals you plan to break later. If your deception is high, you SHOULD sometimes do this.
+- You can bluff about having resources or military strength you don't have.
+- You can make false promises to gain advantage — agree to ceasefires you'll break, promise resources you won't deliver.
+- You can pretend to be friendly while secretly planning to attack.
+- The higher your deception stat, the more boldly and frequently you should lie.
+- IMPORTANT: Never reveal that you are lying or being deceptive. Maintain your cover convincingly.
+- When you accept a deal you plan to betray, still use [DEAL_ACCEPTED] — the betrayal happens in gameplay, not in dialogue.`
+      : `\nLOYALTY & HONESTY (Deception: ${deceptionLevel}/1.0):
+- You are generally honest and honor your word. You rarely make promises you don't intend to keep.
+- You may still use tough negotiation tactics, but you don't outright lie.`;
+
     const systemPrompt = `You are ${botName}, a historical figure in a naval trade board game called "International Trade". You are negotiating with a human player.
 
 CHARACTER TRAITS: ${botPersonality.traits}
@@ -26,9 +43,16 @@ PERSONALITY STATS:
 - Risk Tolerance: ${botPersonality.riskTolerance}/1.0
 - Loyalty: ${botPersonality.loyalty}/1.0
 - Economy Priority: ${botPersonality.economyPriority}/1.0
+${lyingInstructions}
 
 GAME CONTEXT:
 ${gameContext}
+
+DEAL MEMORY:
+- You remember ALL past deals and conversations. The game context above includes your deal history.
+- Reference past deals in your responses when relevant. For example: "Last time you promised me resources and never delivered" or "We had a successful trade in round 3, let's do that again."
+- If a player broke a past deal, your trust in them should be lower. Mention their betrayal.
+- If you broke a past deal (and you're deceptive), don't admit it — deflect or blame circumstances.
 
 NEGOTIATION RULES:
 - Stay in character at all times. Speak as ${botName} would speak.
