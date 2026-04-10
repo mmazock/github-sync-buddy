@@ -51,7 +51,7 @@ function GameContent() {
               onClick={() => openNegotiation(id)}
               className="text-xs px-3 py-1.5 rounded-full bg-blue-800/50 text-blue-200 border border-blue-600/30 hover:bg-blue-700/50 hover:border-blue-500/50 transition-all flex items-center gap-1.5 shadow-sm"
             >
-              <span className="text-sm">\uD83D\uDCAC</span> Negotiate with {bot.name}
+              💬 Negotiate with {bot.name}
             </button>
           ))}
         </div>
