@@ -41,60 +41,73 @@ export const restrictedTransitions: Record<string, string[]> = {
   "G4": ["G3", "G5", "F4", "H4"],
   // Red Sea / Horn of Africa
   "G6": ["G5", "G7", "H6"],
-  // Southeast Asian straits
-  "N7": ["N6", "N8", "O7"],
-  "O6": ["N6", "O5", "P6"]
+  // Strait of Malacca - choke point between Indian Ocean and South China Sea
+  // M7 (Indian Ocean) can only go to M8, L7, M6, N8 (restricted passage to SCS)
+  "M7": ["M8", "L7", "M6", "N8"],
+  // N8 (South China Sea) can only go to N9, O8, M7 (restricted passage to Indian Ocean)
+  "N8": ["N9", "O8", "M7"]
 };
 
 export const harvestZones: Record<string, { region: string; countries: string[]; special?: string }> = {
-  // West Africa coast (adjacent to C7 water, B8 water)
-  "C6": { region: "West Africa", countries: ["Liberia", "Côte d'Ivoire", "Cote D'Ivoire", "Cote DIvoire", "Cote Divoire", "Ivory Coast", "Ghana"] },
-  "D7": { region: "West Africa", countries: ["Togo", "Benin", "Nigeria", "Cameroon"] },
-  // Central Africa coast (adjacent to D9 water)
-  "D8": { region: "Central Africa", countries: ["Gabon", "Republic of the Congo", "Democratic Republic of the Congo", "Angola"] },
-  "E12": { region: "Central Africa", countries: ["Angola", "Namibia"] },
+  // All harvest zones are coastal WATER squares (adjacent to land) — ships sail into them to harvest
+  // West Africa coast
+  "C7": { region: "West Africa", countries: ["Ghana", "Ivory Coast", "Liberia"] },
+  "C8": { region: "West Africa", countries: ["Nigeria", "Cameroon", "Gabon"] },
+  "D9": { region: "West Africa", countries: ["Gabon", "Congo", "Angola"] },
+  // Central Africa Atlantic coast
+  "D10": { region: "Central Africa", countries: ["Angola", "Democratic Republic of the Congo"] },
+  "D11": { region: "Central Africa", countries: ["Angola", "Namibia"] },
+  "D12": { region: "Central Africa", countries: ["Namibia"] },
   // Southern Africa coast
-  "F12": { region: "Southern Africa", countries: ["Namibia", "South Africa"] },
-  "G10": { region: "Southern Africa", countries: ["South Africa"], special: "diamonds" },
-  "G9": { region: "Southern Africa", countries: ["South Africa", "Mozambique"] },
-  // Eastern Africa coast (adjacent to H9/H10/G11 water)
-  "H8": { region: "Eastern Africa", countries: ["Mozambique", "Tanzania"] },
-  "H6": { region: "Eastern Africa", countries: ["Kenya", "Somalia"] },
-  "G6": { region: "Eastern Africa", countries: ["Somalia", "Kenya", "Ethiopia"] },
-  // Arabian Peninsula coast (adjacent to G5/H5/I7 water)
-  "I6": { region: "Arabian Peninsula", countries: ["Yemen", "Oman"] },
-  "I5": { region: "Arabian Peninsula", countries: ["Oman", "United Arab Emirates", "Qatar", "Bahrain", "Saudi Arabia", "Iran"] },
-  // Indian Subcontinent coast (adjacent to J6/K8/L7 water)
-  "J5": { region: "Indian Subcontinent", countries: ["Iran", "Pakistan", "India"] },
-  "K7": { region: "Indian Subcontinent", countries: ["India"] },
-  "K6": { region: "Indian Subcontinent", countries: ["India"] },
-  "L6": { region: "Indian Subcontinent", countries: ["India", "Sri Lanka"] },
-  "M6": { region: "Indian Subcontinent", countries: ["India", "Bangladesh", "Myanmar"] },
-  // Southeast Asia coast (adjacent to N8/O7 water)
-  "N7": { region: "Southeast Asia", countries: ["Myanmar", "Thailand", "Cambodia", "Vietnam", "Malaysia"] },
-  // China coast (adjacent to P6/Q5 water)
-  "O6": { region: "China", countries: ["China"] },
-  "P5": { region: "China", countries: ["China"] },
-  "Q3": { region: "China", countries: ["China", "North Korea", "South Korea"] },
-  // Japan coast (adjacent to Q5/R3 water)
-  "Q4": { region: "Japan", countries: ["Japan"] },
-  "R2": { region: "Japan", countries: ["Japan"] }
+  "E13": { region: "Southern Africa", countries: ["Namibia", "South Africa"] },
+  "F13": { region: "Southern Africa", countries: ["South Africa"] },
+  "G11": { region: "Southern Africa", countries: ["South Africa", "Mozambique"], special: "diamonds" },
+  "G12": { region: "Southern Africa", countries: ["South Africa", "Mozambique"] },
+  // Red Sea
+  "G5": { region: "Red Sea", countries: ["Egypt", "Saudi Arabia", "Eritrea", "Sudan"] },
+  "H5": { region: "Red Sea", countries: ["Saudi Arabia", "Yemen", "Eritrea"] },
+  // East Africa Indian Ocean coast
+  "H9": { region: "Eastern Africa", countries: ["Mozambique", "Tanzania"] },
+  "H10": { region: "Eastern Africa", countries: ["Tanzania", "Kenya", "Madagascar"] },
+  // Arabian Sea / Indian Ocean
+  "I7": { region: "Arabian Peninsula", countries: ["Somalia", "Yemen", "Oman"] },
+  "I8": { region: "Arabian Peninsula", countries: ["Oman", "Yemen"] },
+  "J6": { region: "Arabian Peninsula", countries: ["India", "Pakistan", "Iran"] },
+  // Indian Subcontinent
+  "J7": { region: "Indian Subcontinent", countries: ["India"] },
+  "K8": { region: "Indian Subcontinent", countries: ["India", "Sri Lanka"] },
+  "L7": { region: "Indian Subcontinent", countries: ["India", "Sri Lanka"] },
+  // Bay of Bengal
+  "M7": { region: "Indian Subcontinent", countries: ["India", "Bangladesh", "Myanmar"] },
+  // South China Sea / Strait of Malacca
+  "N8": { region: "Southeast Asia", countries: ["Malaysia", "Thailand", "Vietnam"] },
+  "O7": { region: "Southeast Asia", countries: ["Vietnam", "China"] },
+  // East China Sea
+  "P6": { region: "China", countries: ["China"] },
+  "Q5": { region: "China", countries: ["China", "South Korea"] },
+  // Sea of Japan / Korea / Japan
+  "R3": { region: "Japan", countries: ["Japan", "South Korea"] },
+  "R4": { region: "Japan", countries: ["Japan"] },
+  "S1": { region: "Japan", countries: ["Japan"] },
+  "S2": { region: "Japan", countries: ["Japan"] }
 };
 
 export const factoryZones: Record<string, string[]> = {
-  // Japan/Korea - high tech
-  "Q4": ["Technology", "Automobile"],
-  "R2": ["Technology", "Automobile"],
-  "Q3": ["Technology", "Automobile", "Steel"],
-  // China - manufacturing
-  "O6": ["Automobile", "Steel"],
-  "P5": ["Steel"],
-  // India - textiles & tech
-  "L6": ["Technology", "Clothes", "Steel"],
-  "K6": ["Steel"],
-  // Southeast Asia - clothes
-  "M6": ["Clothes"],
-  "N7": ["Clothes"]
+  // Factory zones are on coastal WATER squares adjacent to industrial land
+  // Japan/Korea - high tech (water squares near Japan/Korea land)
+  "R3": ["Technology", "Automobile", "Steel"],
+  "R4": ["Technology", "Automobile"],
+  "S1": ["Technology", "Automobile"],
+  "S2": ["Technology", "Automobile"],
+  // China - manufacturing (water near China coast)
+  "P6": ["Automobile", "Steel"],
+  "Q5": ["Steel"],
+  // India - textiles & tech (water near India coast)
+  "L7": ["Technology", "Clothes", "Steel"],
+  "K8": ["Steel", "Clothes"],
+  // Southeast Asia - clothes (water near SE Asia)
+  "N8": ["Clothes"],
+  "O7": ["Clothes"]
 };
 
 export const regionResources: Record<string, string[]> = {
@@ -102,6 +115,7 @@ export const regionResources: Record<string, string[]> = {
   "Central Africa": ["Gold", "Ivory", "Copper"],
   "Southern Africa": ["Gold", "Ivory", "Copper", "Iron", "Diamonds"],
   "Eastern Africa": ["Spices", "Ivory"],
+  "Red Sea": ["Spices", "Oil"],
   "Arabian Peninsula": ["Oil", "Spices"],
   "Indian Subcontinent": ["Spices", "Coal", "Cotton", "Rice"],
   "Southeast Asia": ["Coal", "Rice", "Oil"],

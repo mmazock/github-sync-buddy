@@ -2,7 +2,7 @@ import { useCallback, useRef, useEffect, useState } from "react";
 import { useGame } from "@/hooks/useGameState";
 import {
   columnPixels, rowPixels, originalWidth, originalHeight,
-  harvestZones, factoryZones, countryData
+  harvestZones, factoryZones, countryData, waterSquares
 } from "@/lib/gameData";
 
 const COL_LETTERS = "ABCDEFGHIJKLMNOPQRS".split("");
@@ -198,12 +198,23 @@ export default function CanvasMap() {
         const y = cy - cellH / 2;
 
         // Harvest zone highlight
+        const isWater = waterSquares.has(sq);
         if (harvestZones[sq]) {
-          ctx.fillStyle = "rgba(34, 197, 94, 0.25)";
-          ctx.fillRect(x, y, cellW, cellH);
-          ctx.strokeStyle = "rgba(34, 197, 94, 0.6)";
-          ctx.lineWidth = 1.5;
-          ctx.strokeRect(x, y, cellW, cellH);
+          if (isWater) {
+            // Ocean harvest zone - subtle teal tint
+            ctx.fillStyle = "rgba(6, 182, 212, 0.15)";
+            ctx.fillRect(x, y, cellW, cellH);
+            ctx.strokeStyle = "rgba(6, 182, 212, 0.4)";
+            ctx.lineWidth = 1;
+            ctx.strokeRect(x, y, cellW, cellH);
+          } else {
+            // Land harvest zone - green
+            ctx.fillStyle = "rgba(34, 197, 94, 0.25)";
+            ctx.fillRect(x, y, cellW, cellH);
+            ctx.strokeStyle = "rgba(34, 197, 94, 0.6)";
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(x, y, cellW, cellH);
+          }
         }
 
         // Factory zone highlight (also harvestable - shown with dual color)
@@ -386,7 +397,11 @@ export default function CanvasMap() {
       <div className="flex gap-4 mt-2 text-xs text-muted-foreground flex-wrap">
         <span className="flex items-center gap-1">
           <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: "rgba(34, 197, 94, 0.3)" }} />
-          Harvest Zone
+          Land Harvest
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: "rgba(6, 182, 212, 0.3)" }} />
+          Ocean Harvest
         </span>
         <span className="flex items-center gap-1">
           <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: "rgba(251, 191, 36, 0.3)" }} />
