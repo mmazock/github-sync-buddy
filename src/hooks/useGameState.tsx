@@ -923,6 +923,31 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (!activePlayerId) return;
       const activePlayer = data.players?.[activePlayerId];
 
+      // Handle permission requests where the owner is a bot — auto-respond
+      if (data.permissionRequest && !data.permissionResult) {
+        const request = data.permissionRequest;
+        const owner = data.players[request.ownerId];
+        if (owner?.isBot) {
+          await new Promise(r => setTimeout(r, 1000));
+          const ownerPersonalityId = BOT_PERSONALITIES[owner.personality!] ? owner.personality! : "putin";
+          const ownerPersonality = BOT_PERSONALITIES[ownerPersonalityId];
+          const ownerTrust = botTrustScores[request.ownerId]?.[request.requesterId] || 50;
+          const grantChance = (ownerTrust / 100) * ownerPersonality.loyalty;
+          if (Math.random() < grantChance) {
+            await grantAccess();
+            await addGameLog(`${owner.name} granted passage to ${data.players[request.requesterId]?.name}`);
+          } else {
+            await denyAccess();
+            await addGameLog(`${owner.name} denied passage to ${data.players[request.requesterId]?.name}`);
+          }
+          const freshSnap = await get(child(gamesRef, currentGameCode!));
+          const freshData = freshSnap.val() as GameData;
+          if (!freshData || freshData.hostId !== currentPlayerId || freshData.gameState !== "active") return;
+          data = freshData;
+          continue;
+        }
+      }
+
       if (!activePlayer?.isBot) {
         // Handle bot battle responses when it's a human's turn but bot is in battle
         if (data.battle) {
@@ -1179,6 +1204,67 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         break;
+      }
+
+      // Suez Canal permission check for bots
+      const currentBotPos = freshBot.shipPosition;
+      if ((currentBotPos === "G3" && target === "G4") || (currentBotPos === "G4" && target === "G3")) {
+        if (!freshData.suezOwner) break; // Suez not built yet
+        if (freshData.suezOwner !== botId) {
+          const suezOwner = freshData.players[freshData.suezOwner];
+          if (suezOwner?.isBot) {
+            // Bot-to-bot: owner auto-decides based on trust
+            const ownerPersonalityId = BOT_PERSONALITIES[suezOwner.personality!] ? suezOwner.personality! : "putin";
+            const ownerPersonality = BOT_PERSONALITIES[ownerPersonalityId];
+            const ownerTrust = botTrustScores[freshData.suezOwner]?.[botId] || 50;
+            const grantChance = (ownerTrust / 100) * ownerPersonality.loyalty;
+            if (Math.random() < grantChance) {
+              await addGameLog(`\u2693 ${suezOwner.name} granted ${freshBot.name} passage through the Suez Canal`);
+            } else {
+              await addGameLog(`\u26D4 ${suezOwner.name} denied ${freshBot.name} passage through the Suez Canal`);
+              break; // Can't pass, stop moving
+            }
+          } else {
+            // Bot requesting from human — create permission request and wait
+            await update(child(gamesRef, currentGameCode), {
+              permissionRequest: {
+                type: "suez", requesterId: botId,
+                ownerId: freshData.suezOwner, square: target, round: freshData.round
+              }
+            });
+            await addGameLog(`\u2693 ${freshBot.name} requests permission to use the Suez Canal`);
+            return; // Stop bot movement, wait for human response
+          }
+        }
+      }
+
+      // Dictatorship permission check for bots
+      const dictOwner = (freshData.dictatorships || {})[target];
+      if (dictOwner && dictOwner !== botId) {
+        const dictPlayer = freshData.players[dictOwner];
+        if (dictPlayer?.isBot) {
+          // Bot-to-bot: owner auto-decides based on trust
+          const ownerPersonalityId = BOT_PERSONALITIES[dictPlayer.personality!] ? dictPlayer.personality! : "putin";
+          const ownerPersonality = BOT_PERSONALITIES[ownerPersonalityId];
+          const ownerTrust = botTrustScores[dictOwner]?.[botId] || 50;
+          const grantChance = (ownerTrust / 100) * ownerPersonality.loyalty;
+          if (Math.random() < grantChance) {
+            await addGameLog(`\uD83C\uDFF0 ${dictPlayer.name} granted ${freshBot.name} passage through ${target}`);
+          } else {
+            await addGameLog(`\u26D4 ${dictPlayer.name} denied ${freshBot.name} passage through ${target}`);
+            break; // Can't pass, stop moving
+          }
+        } else {
+          // Bot requesting from human — create permission request and wait
+          await update(child(gamesRef, currentGameCode), {
+            permissionRequest: {
+              type: "dictatorship", requesterId: botId,
+              ownerId: dictOwner, square: target, round: freshData.round
+            }
+          });
+          await addGameLog(`\uD83C\uDFF0 ${freshBot.name} requests permission to enter ${target}`);
+          return; // Stop bot movement, wait for human response
+        }
       }
 
       await update(child(gamesRef, `${currentGameCode}/players/${botId}`), { shipPosition: target, movesRemaining: movesLeft - 1 });
