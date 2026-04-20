@@ -893,8 +893,8 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           await new Promise(r => setTimeout(r, 1200));
           const ownerPersonality = BOT_PERSONALITIES[owner.personality!] || BOT_PERSONALITIES.putin;
           // Decide: bots more likely to deny passage to rivals; loyalty raises chance to grant
-          const trust = currentBotMemory?.[req.ownerId]?.[req.requesterId]?.trust ?? 0.5;
-          const grantChance = Math.max(0.05, Math.min(0.85, ownerPersonality.loyalty * 0.6 + trust * 0.4 - ownerPersonality.aggression * 0.2));
+          const trust = (botTrustScores[req.ownerId]?.[req.requesterId] ?? 50) / 100;
+          const grantChance = Math.max(0.05, Math.min(0.85, ownerPersonality.loyalty * 0.5 + trust * 0.5 - ownerPersonality.aggression * 0.2));
           const grant = Math.random() < grantChance;
           if (grant && requester) {
             await update(child(gamesRef, `${currentGameCode}/players/${req.requesterId}`), {
