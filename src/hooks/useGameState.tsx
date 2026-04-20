@@ -1028,7 +1028,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       if (!refreshedData || refreshedData.hostId !== currentPlayerId || refreshedData.gameState !== "active") return;
       data = refreshedData;
     }
-  }, [currentGameCode, currentPlayerId]);
+  }, [currentGameCode, currentPlayerId, botTrustScores, addGameLog, advanceTurn]);
 
   const executeBotTurnAction = useCallback(async (botId: string, data: GameData) => {
     if (!currentGameCode) return;
