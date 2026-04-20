@@ -1275,7 +1275,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           for (const [sq, zone] of Object.entries(harvestZones)) {
             const resources = regionResources[zone.region] || [];
             if (resources.includes(needed)) {
-              const d = bfsDistance(bot.shipPosition, sq, data);
+              const d = bfsDistance(bot.shipPosition, sq, data, botId);
               if (d < bestDist) { bestDist = d; bestZone = sq; }
             }
           }
@@ -1293,7 +1293,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     for (const sq in harvestZones) {
       const region = harvestZones[sq].region;
       const resources = regionResources[region] || [];
-      const dist = bfsDistance(bot.shipPosition, sq, data);
+      const dist = bfsDistance(bot.shipPosition, sq, data, botId);
       if (dist > 40) continue;
 
       // Calculate expected value of harvesting here
@@ -1304,7 +1304,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Distance to home from this zone
-      const distHome = bfsDistance(sq, bot.homePort, data);
+      const distHome = bfsDistance(sq, bot.homePort, data, botId);
       const totalDist = dist + distHome;
       if (totalDist === 0) continue;
 
@@ -1324,13 +1324,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
   const botChooseMove = (botId: string, bot: PlayerData, data: GameData, personality: any, difficulty: any): string | null => {
     const currentPos = bot.shipPosition;
-    const adjacent = getValidAdjacentSquares(currentPos, data);
+    const adjacent = getValidAdjacentSquares(currentPos, data, botId);
     if (adjacent.length === 0) return null;
 
     const goal = botChooseGoal(botId, bot, data, personality, difficulty);
 
     const scored = adjacent.map(target => {
-      const distToGoal = bfsDistance(target, goal, data);
+      const distToGoal = bfsDistance(target, goal, data, botId);
       // Primary: move closer to goal
       let score = 1000 - distToGoal;
 
