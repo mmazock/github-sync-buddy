@@ -883,6 +883,61 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
 
     while (safety < 50) {
       safety++;
+
+      // Bot owner auto-responds to permission requests (Suez/dictatorship transit)
+      if (data.permissionRequest) {
+        const req = data.permissionRequest;
+        const owner = data.players?.[req.ownerId];
+        const requester = data.players?.[req.requesterId];
+        if (owner?.isBot) {
+          await new Promise(r => setTimeout(r, 1200));
+          const ownerPersonality = BOT_PERSONALITIES[owner.personality!] || BOT_PERSONALITIES.putin;
+          // Decide: bots more likely to deny passage to rivals; loyalty raises chance to grant
+          const trust = currentBotMemory?.[req.ownerId]?.[req.requesterId]?.trust ?? 0.5;
+          const grantChance = Math.max(0.05, Math.min(0.85, ownerPersonality.loyalty * 0.6 + trust * 0.4 - ownerPersonality.aggression * 0.2));
+          const grant = Math.random() < grantChance;
+          if (grant && requester) {
+            await update(child(gamesRef, `${currentGameCode}/players/${req.requesterId}`), {
+              shipPosition: req.square,
+              movesRemaining: Math.max(0, (requester.movesRemaining || 1) - 1)
+            });
+            await update(child(gamesRef, currentGameCode!), {
+              permissionResult: { requesterId: req.requesterId, message: "Access Approved!" },
+              permissionRequest: null
+            });
+            await addGameLog(`✅ ${owner.name} granted ${requester.name} passage through ${req.square}`);
+          } else {
+            await update(child(gamesRef, currentGameCode!), {
+              permissionResult: { requesterId: req.requesterId, message: "Access Denied." },
+              permissionRequest: null
+            });
+            await addGameLog(`⛔ ${owner.name} denied ${requester?.name || "bot"} passage through ${req.square}`);
+          }
+          // If requester is a bot, auto-clear the result so the loop continues for them
+          if (requester?.isBot) {
+            await new Promise(r => setTimeout(r, 600));
+            await update(child(gamesRef, currentGameCode!), { permissionResult: null });
+          }
+          const freshSnap = await get(child(gamesRef, currentGameCode!));
+          const freshData = freshSnap.val() as GameData;
+          if (!freshData || freshData.hostId !== currentPlayerId || freshData.gameState !== "active") return;
+          data = freshData;
+          continue;
+        }
+        // Owner is human — wait for their response (don't block other bot work indefinitely)
+        return;
+      }
+
+      // Auto-clear stale permissionResult belonging to a bot requester
+      if (data.permissionResult && data.players?.[data.permissionResult.requesterId]?.isBot) {
+        await update(child(gamesRef, currentGameCode!), { permissionResult: null });
+        const freshSnap = await get(child(gamesRef, currentGameCode!));
+        const freshData = freshSnap.val() as GameData;
+        if (!freshData) return;
+        data = freshData;
+        continue;
+      }
+
       const turnOrder = data.turnOrder || [];
       const currentTurnIndex = data.currentTurnIndex || 0;
       const activePlayerId = turnOrder[currentTurnIndex];
