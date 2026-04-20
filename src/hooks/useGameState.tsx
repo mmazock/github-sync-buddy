@@ -1120,12 +1120,35 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
       const freshSnap = await get(child(gamesRef, currentGameCode));
       const freshData = freshSnap.val() as GameData;
       if (!freshData || freshData.battle) break;
+      // If a permission request is already pending (involving this bot), pause and let the loop handle it
+      if (freshData.permissionRequest && (freshData.permissionRequest.requesterId === botId || freshData.permissionRequest.ownerId === botId)) break;
       const freshBot = freshData.players[botId];
 
-      const target = botChooseMove(botId, freshBot, freshData, personality, difficulty);
+      // Consider both freely-traversable adjacents AND restricted (Suez/dictatorship) adjacents
+      const freeAdj = getValidAdjacentSquares(freshBot.shipPosition, freshData, botId);
+      const restrictedAdj = getRestrictedAdjacentSquares(freshBot.shipPosition, freshData, botId);
+
+      let target = botChooseMove(botId, freshBot, freshData, personality, difficulty);
+      let needsPermission: { type: "suez" | "dictatorship"; ownerId: string } | null = null;
+
+      // If a restricted square would meaningfully shortcut toward the goal, request permission instead
+      if (restrictedAdj.length > 0) {
+        const goal = botChooseGoal(botId, freshBot, freshData, personality, difficulty);
+        const freeBest = target ? bfsDistance(target, goal, freshData, botId) : 9999;
+        for (const r of restrictedAdj) {
+          // After crossing, treat the restricted square as a free node: estimate remaining distance via BFS allowing nothing extra
+          const remaining = bfsDistance(r.square, goal, freshData, botId);
+          if (remaining + 1 < freeBest) {
+            target = r.square;
+            needsPermission = { type: r.type, ownerId: r.ownerId };
+            break;
+          }
+        }
+      }
+
       if (!target) break;
 
-      // Check for other players
+      // Check for other players at target
       let defenderId: string | null = null;
       for (const id in freshData.players) {
         if (id !== botId && freshData.players[id].shipPosition === target) { defenderId = id; break; }
@@ -1145,6 +1168,18 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         break;
+      }
+
+      // Permission required — request it and wait (loop will resume after grantAccess applies the move)
+      if (needsPermission) {
+        await update(child(gamesRef, currentGameCode), {
+          permissionRequest: {
+            type: needsPermission.type, requesterId: botId,
+            ownerId: needsPermission.ownerId, square: target, round: freshData.round
+          }
+        });
+        await addGameLog(`🚧 ${freshBot.name} requests passage through ${target}`);
+        return; // owner will respond; processBotAutomation handles continuation
       }
 
       await update(child(gamesRef, `${currentGameCode}/players/${botId}`), { shipPosition: target, movesRemaining: movesLeft - 1 });
