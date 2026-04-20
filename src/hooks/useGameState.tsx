@@ -1256,7 +1256,7 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
           let bestDist = 9999;
           for (const [sq, goods] of Object.entries(factoryZones)) {
             if (goods.includes(good)) {
-              const d = bfsDistance(bot.shipPosition, sq, data);
+              const d = bfsDistance(bot.shipPosition, sq, data, botId);
               if (d < bestDist) { bestDist = d; bestFactory = sq; }
             }
           }
