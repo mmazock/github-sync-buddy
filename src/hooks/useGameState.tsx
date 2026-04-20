@@ -1271,6 +1271,32 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     return adjacent;
   };
 
+  // Returns adjacent squares that require permission (foreign Suez crossing or foreign dictatorship)
+  const getRestrictedAdjacentSquares = (
+    currentPos: string, data: GameData, botId: string
+  ): Array<{ square: string; type: "suez" | "dictatorship"; ownerId: string }> => {
+    const col = currentPos.charCodeAt(0);
+    const row = parseInt(currentPos.slice(1));
+    const dicts = data.dictatorships || {};
+    const out: Array<{ square: string; type: "suez" | "dictatorship"; ownerId: string }> = [];
+    for (const [dc, dr] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+      const target = String.fromCharCode(col + dc) + (row + dr);
+      if (!waterSquares.has(target)) continue;
+      if (restrictedTransitions[currentPos] && !restrictedTransitions[currentPos].includes(target)) continue;
+      // Suez crossing owned by another player
+      if (((currentPos === "G3" && target === "G4") || (currentPos === "G4" && target === "G3"))
+          && data.suezOwner && data.suezOwner !== botId) {
+        out.push({ square: target, type: "suez", ownerId: data.suezOwner });
+        continue;
+      }
+      // Foreign dictatorship
+      if (dicts[target] && dicts[target] !== botId) {
+        out.push({ square: target, type: "dictatorship", ownerId: dicts[target] });
+      }
+    }
+    return out;
+  };
+
   const botChooseGoal = (botId: string, bot: PlayerData, data: GameData, personality: any, difficulty: any): string => {
     const inv = bot.inventory || {};
     const hasInventory = Object.keys(inv).length > 0;
