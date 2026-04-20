@@ -1185,9 +1185,10 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     await advanceTurn();
   }, [currentGameCode, addGameLog, advanceTurn]);
 
-  // BFS pathfinding for bots
-  const bfsDistance = (from: string, to: string, data: GameData): number => {
+  // BFS pathfinding for bots — routes around foreign dictatorships and unowned/foreign Suez
+  const bfsDistance = (from: string, to: string, data: GameData, botId?: string): number => {
     if (from === to) return 0;
+    const dicts = data.dictatorships || {};
     const queue: Array<[string, number]> = [[from, 0]];
     const visited = new Set<string>([from]);
     while (queue.length > 0) {
@@ -1199,9 +1200,13 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
         if (visited.has(next)) continue;
         if (!waterSquares.has(next)) continue;
         if (restrictedTransitions[pos] && !restrictedTransitions[pos].includes(next)) continue;
+        // Suez canal crossing: must be constructed AND owned by us (else permission is needed; treat as costly)
         if ((pos === "G3" && next === "G4") || (pos === "G4" && next === "G3")) {
           if (!data.suezOwner) continue;
+          if (botId && data.suezOwner !== botId) continue;
         }
+        // Foreign dictatorship — bots avoid pathing through (permission flow handled separately)
+        if (dicts[next] && botId && dicts[next] !== botId) continue;
         if (next === to) return dist + 1;
         visited.add(next);
         queue.push([next, dist + 1]);
@@ -1210,16 +1215,21 @@ export function GameProvider({ children }: { children: React.ReactNode }) {
     return 9999;
   };
 
-  const getValidAdjacentSquares = (currentPos: string, data: GameData): string[] => {
+  const getValidAdjacentSquares = (currentPos: string, data: GameData, botId?: string): string[] => {
     const col = currentPos.charCodeAt(0);
     const row = parseInt(currentPos.slice(1));
+    const dicts = data.dictatorships || {};
     const adjacent: string[] = [];
     for (const [dc, dr] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
       const target = String.fromCharCode(col + dc) + (row + dr);
       if (!waterSquares.has(target)) continue;
       if (restrictedTransitions[currentPos] && !restrictedTransitions[currentPos].includes(target)) continue;
+      // Block foreign dictatorships from being chosen as a move target by bots
+      if (botId && dicts[target] && dicts[target] !== botId) continue;
+      // Suez crossing — needs construction; foreign-owned blocked from bot's normal move list
       if ((currentPos === "G3" && target === "G4") || (currentPos === "G4" && target === "G3")) {
         if (!data.suezOwner) continue;
+        if (botId && data.suezOwner !== botId) continue;
       }
       adjacent.push(target);
     }
