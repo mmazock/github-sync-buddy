@@ -73,11 +73,11 @@ export const harvestZones: Record<string, { region: string; countries: string[];
 };
 
 export const factoryZones: Record<string, string[]> = {
-  "P3": ["Technology", "Automobile", "Steel"],
-  "Q3": ["Technology", "Automobile"],
-  "R3": ["Technology", "Automobile"],
+  "P3": ["Technology", "Automobiles", "Steel"],
+  "Q3": ["Technology", "Automobiles"],
+  "R3": ["Technology", "Automobiles"],
   "L4": ["Technology", "Clothes"],
-  "O4": ["Automobile", "Steel"],
+  "O4": ["Automobiles", "Steel"],
   "K5": ["Steel"],
   "L5": ["Steel", "Clothes"],
   "P4": ["Steel"],
@@ -120,7 +120,7 @@ export const baseResourceValues: Record<string, number> = {
 
 export const manufacturingRecipes: Record<string, { inputs: string[] }> = {
   "Technology": { inputs: ["Copper", "Oil"] },
-  "Automobile": { inputs: ["Steel", "Clothes", "Oil", "Copper"] },
+  "Automobiles": { inputs: ["Steel", "Clothes", "Oil", "Copper"] },
   "Steel": { inputs: ["Iron", "Coal"] },
   "Clothes": { inputs: ["Cotton", "Silk"] }
 };
