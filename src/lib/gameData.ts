@@ -120,7 +120,7 @@ export const baseResourceValues: Record<string, number> = {
 
 export const manufacturingRecipes: Record<string, { inputs: string[] }> = {
   "Technology": { inputs: ["Copper", "Oil"] },
-  "Automobile": { inputs: ["Steel", "Clothes", "Oil", "Copper"] },
+  "Automobiles": { inputs: ["Steel", "Clothes", "Oil", "Copper"] },
   "Steel": { inputs: ["Iron", "Coal"] },
   "Clothes": { inputs: ["Cotton", "Silk"] }
 };
